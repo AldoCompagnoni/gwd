@@ -6,12 +6,13 @@ library(lcvplants)
 library(leaflet)
 
 # read in data
-rug1 <- readxl::read_xlsx( 'data/aaz4797_Ruger_Data_S1.xlsx', sheet = 2 )
+rug1 <- readxl::read_xlsx( 'data/aaz4797_Ruger_Data_S1.xlsx', 
+                           sheet = 2 )
 
 
 # Prepare Site table -------------------------------
 
-# Do this by hand
+# Do this by hand (I could not find this data in tabular form yet)
 site_out <- data.frame( Site_name = 'BCI',
                         Latitude  = 9.154300000000,
                         Longitude = -79.846100000000  )
