@@ -5,7 +5,7 @@ library(LCVP)
 library(lcvplants)
 library(leaflet)
 
-# read in data
+# read in data (Appendix from dx.doi.org/10.1126/science.aaz4797 )
 rug1 <- readxl::read_xlsx( 'data/aaz4797_Ruger_Data_S1.xlsx', 
                            sheet = 2 )
 
@@ -54,11 +54,11 @@ reclean_df
 
 # Upon scrituny
 # 1. There are several spelling mistakes
-# 2. We cannot only determine the genus for two species:
+# 2. We cannot determine the genus for only two species:
 # Nectandra and Sapium.
 
 # Final taxonomy files 
-taxa_nofuzzy    <- clean_df %>% subset( Score == 'matched' )
+taxa_nofuzzy    <- clean_df %>% subset( Score == 'matched' ) 
 taxa_fuzzy      <- count( reclean_df, Submitted_Name ) %>% 
                      subset( n > 1 ) %>% 
                      dplyr::select( -n )
