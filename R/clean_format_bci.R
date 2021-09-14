@@ -13,7 +13,7 @@ library(LCVP)
 library(lcvplants)
 library(leaflet)
 
-# Read in data -----------------------------------
+# Read in and filter data -----------------------------------
 
 kam_means <- read.table( 'data/Demographies_with_dbh_means_Kambach.txt', header = TRUE )
 kam_medians <- read.table( 'data/Demographies_with_dbh_medians_Kambach.txt', header = TRUE )

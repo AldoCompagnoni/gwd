@@ -35,6 +35,7 @@ taxa_df         <- dplyr::select(rug1, Genus, Species) %>%
                      rename( Genus_author   = Genus,
                              Species_author = Species )
 
+
 # function: get "cleaned" names
 get_clean_names <- function( nam, fuzzy = 0 ) LCVP( nam, max.distance = fuzzy )
 
