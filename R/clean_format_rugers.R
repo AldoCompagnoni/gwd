@@ -6,7 +6,8 @@ library(lcvplants)
 library(leaflet)
 
 # read in data
-rug1 <- readxl::read_xlsx( 'data/aaz4797_Ruger_Data_S1.xlsx', sheet = 2 )
+rug1 <- readxl::read_xlsx( 'data/aaz4797_Ruger_Data_S1.xlsx', 
+                           sheet = 2 )
 
 
 # Prepare Site table -------------------------------
