@@ -41,4 +41,3 @@ write.csv( site_out, 'results/bci_site.csv',
 # Produce the binomial used for checking
 taxa_df         <- dplyr::select( bci_means, latin) %>%
   rename( Submitted_Name = latin )
-
