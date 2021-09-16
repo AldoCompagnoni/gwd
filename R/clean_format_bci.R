@@ -13,7 +13,7 @@ library(LCVP)
 library(lcvplants)
 library(leaflet)
 
-# Read in and filter data -----------------------------------
+# Read in and filter data ------------------------
 
 kam_means <- read.table( 'data/Demographies_with_dbh_means_Kambach.txt', header = TRUE )
 kam_medians <- read.table( 'data/Demographies_with_dbh_medians_Kambach.txt', header = TRUE )
@@ -41,3 +41,11 @@ write.csv( site_out, 'results/bci_site.csv',
 # Produce the binomial used for checking
 taxa_df         <- dplyr::select( bci_means, latin) %>%
   rename( Submitted_Name = latin )
+
+# Create function: get "cleaned" names
+get_clean_names <- function( nam, fuzzy = 0 ) lcvp_search( nam, max.distance = fuzzy )
+
+# Clean names from the Leipzig's list of plants
+clean_l         <- lapply( taxa_df$Submitted_Name , get_clean_names )
+clean_df        <- clean_l %>% bind_rows
+clean_df
