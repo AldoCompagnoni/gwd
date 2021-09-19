@@ -1,0 +1,37 @@
+# pasoh data preparation script
+# Data: Kambach
+
+# Clear environment ------------------------------
+
+rm(list=ls())
+
+# Load packages ----------------------------------
+library(tidyverse)
+# devtools::install_github("idiv-biodiversity/LCVP")
+library(LCVP)
+# devtools::install_github("idiv-biodiversity/lcvplants")
+library(lcvplants)
+library(leaflet)
+
+# Read in and filter data ------------------------
+
+kam_means <- read.table( 'data/Demographies_with_dbh_means_Kambach.txt', header = TRUE )
+kam_medians <- read.table( 'data/Demographies_with_dbh_medians_Kambach.txt', header = TRUE )
+pasoh_means <- dplyr::filter( kam_means, site == "pasoh")
+pasoh_medians <- dplyr::filter( kam_medians, site == "pasoh")
+
+# Prepare site table -----------------------------
+
+# Do this by hand
+site_out <- data.frame( Site_name = 'Pasoh',
+                        Latitude  = 2.982000000000,
+                        Longitude = 102.313000000000 )
+
+# Check that the location is sensible sense
+leaflet( data = site_out) %>% 
+  addTiles() %>% 
+  addCircleMarkers(~Longitude, ~Latitude)
+
+# Store site information
+write.csv( site_out, 'results/pasoh_site.csv',
+           row.names = F )
