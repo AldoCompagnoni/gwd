@@ -33,5 +33,5 @@ leaflet( data = site_out) %>%
   addCircleMarkers(~Longitude, ~Latitude)
 
 # Store site information
-write.csv( site_out, 'results/bci_site.csv',
+write.csv( site_out, 'results/korup_site.csv',
            row.names = F )
