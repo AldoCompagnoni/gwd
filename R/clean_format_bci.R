@@ -49,3 +49,6 @@ get_clean_names <- function( nam, fuzzy = 0 ) lcvp_search( nam, max.distance = f
 clean_l         <- lapply( taxa_df$Submitted_Name , get_clean_names )
 clean_df        <- clean_l %>% bind_rows
 clean_df
+
+# check whether there are issues
+notfound_df     <- clean_df %>% subset( Score != 'matched' )
