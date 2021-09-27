@@ -19,12 +19,12 @@ rug1 <- readxl::read_xlsx( 'data/aaz4797_Ruger_Data_S1.xlsx',
 # Do this by hand (I could not find this data in tabular form yet)
 site_out <- data.frame( Site_name = 'BCI',
                         Latitude  = 9.154300000000,
-                        Longitude = -79.846100000000  )
+                        Longitude = -79.846100000000 )
 
 # Check that the location is sensible sense
-leaflet( data = site_out) %>% 
+leaflet( data = site_out ) %>% 
   addTiles() %>% 
-  addCircleMarkers(~Longitude, ~Latitude)
+  addCircleMarkers( ~Longitude, ~Latitude )
   
 # store site information
 write.csv( site_out, 'results/bci_site.csv',
@@ -34,28 +34,28 @@ write.csv( site_out, 'results/bci_site.csv',
 # Prepare taxonomic table ------------------------------
 
 # Produce the binomial used for checking
-taxa_df         <- dplyr::select(rug1, Genus, Species) %>% 
+taxa_df_rugers         <- dplyr::select( rug1, Genus, Species ) %>% 
                      mutate( Submitted_Name = paste0( Genus, ' ', Species) ) %>% 
                      rename( Genus_author   = Genus,
                              Species_author = Species )
 
 
 # function: get "cleaned" names
-get_clean_names <- function( nam, fuzzy = 0 ) LCVP( nam, max.distance = fuzzy )
+get_clean_names <- function( nam, fuzzy = 0 ) lcvp_search( nam, max.distance = fuzzy )
 
 # Clean names from the Leipzig's list of plants
-clean_l         <- lapply( taxa_df$Submitted_Name , get_clean_names )
-clean_df        <- clean_l %>% bind_rows
+clean_l_rugers         <- lapply( taxa_df_rugers$Submitted_Name , get_clean_names )
+clean_df_rugers        <- clean_l_rugers %>% bind_rows
 
 # check whether there are issues
-notfound_df     <- clean_df %>% subset( Score != 'matched' )
+notfound_df_rugers     <- clean_df_rugers %>% subset( PL.comparison != 'identical' )
 
 # Rerun Leipzig list with fuzzy matching
-reclean_l       <- lapply( notfound_df$Submitted_Name, get_clean_names, 5 )
-reclean_df      <- reclean_l %>% bind_rows
+reclean_l_rugers       <- lapply( notfound_df_rugers$Submitted_Name, get_clean_names, 5 )
+reclean_df_rugers      <- reclean_l_rugers %>% bind_rows
 
 # Examine final file
-reclean_df      
+reclean_df_rugers      
 
 # Upon scrituny
 # 1. There are several spelling mistakes
@@ -83,7 +83,8 @@ write.csv( taxa_unresvd, 'results/bci_taxa_unresvd.csv',
 # Prepare demographic table --------------------------------------
 
 # Are there missing/NULL/Inf values?
-# Are there 
+# Make some box plots to explore the data
+# Check for sample size 0
 
 # check survival
 dplyr::select(rug1, mu1_1:mu4_1 ) %>% 
