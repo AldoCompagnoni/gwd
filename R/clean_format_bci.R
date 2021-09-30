@@ -75,7 +75,7 @@ reclean_df      <- reclean_l %>% bind_rows
 taxa_nofuzzy    <- clean_df
 taxa_fuzzy      <- reclean_df
 # Combine 
-taxa_out        <- bind_rows( taxa_nofuzzy, taxa_fuzzy)
+taxa_out        <- bind_rows( taxa_nofuzzy, taxa_fuzzy )
 # Do "taxa unresolved" by hand (taxa with no matches found)
 taxa_unresvd    <- data.frame( Submitted_Name = no_match_v,
                                site           = 'bci' )
