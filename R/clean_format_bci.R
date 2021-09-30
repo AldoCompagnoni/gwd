@@ -56,8 +56,10 @@ clean_df        <- clean_l %>%
                     mutate( mismatch_test = str_detect( First_matched_Name, 
                                                         Submitted_Name ) )
 
-# visual check of mismatches (These are all plausible typos!)
-clean_df %>% subset( !mismatch_test )
+# visual check of mismatches and alternative spellings
+mismatch_df <- clean_df %>% subset( !mismatch_test )
+check_mismatches <- lapply( mismatch_df$Submitted_Name, lcvp_fuzzy_search )
+# 4 plausible typos which remain in clean data frame
 
 # Check species without matches
 no_match_v <- setdiff( taxa_df$Submitted_Name, 
@@ -65,17 +67,19 @@ no_match_v <- setdiff( taxa_df$Submitted_Name,
 
 # Rerun Leipzig list with fuzzy matching
 reclean_l       <- lapply( no_match_v, lcvp_fuzzy_search )
-# visually select species identified with lcvp_fuzzy_search
 reclean_df      <- reclean_l %>% bind_rows
+# visually select species identified with lcvp_fuzzy_search
+# Only genus specified, 2 taxa remain unresolved
 
 # Final taxonomy files 
-taxa_nofuzzy    <- clean_df %>% subset( mismatch_test )
+taxa_nofuzzy    <- clean_df
 taxa_fuzzy      <- reclean_df
-# Do "taxa unresolved" by hand
+# Combine 
+taxa_out        <- bind_rows( taxa_nofuzzy, taxa_fuzzy)
+# Do "taxa unresolved" by hand (taxa with no matches found)
 taxa_unresvd    <- data.frame( Submitted_Name = no_match_v,
                                site           = 'bci' )
-taxa_out        <- bind_rows( taxa_nofuzzy, taxa_fuzzy) 
-  
+ 
 # store resolved AND unresolved taxa
 write.csv( taxa_out, 'results/bci_taxa.csv',
            row.names = F )
