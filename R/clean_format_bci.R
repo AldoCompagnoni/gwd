@@ -12,7 +12,6 @@ library(LCVP)
 # devtools::install_github("idiv-biodiversity/lcvplants")
 library(lcvplants)
 library(leaflet)
-library(ggplot2)
 
 # Read in and filter data ------------------------
 
@@ -40,33 +39,45 @@ write.csv( site_out, 'results/bci_site.csv',
 # Prepare taxonomic table ------------------------
 
 # Produce the binomial used for checking
-taxa_df_bci         <- dplyr::select( bci_means, latin) %>%
-  rename( Submitted_Name = latin )
+taxa_df         <- dplyr::select( bci_means, latin) %>%
+                     rename( Submitted_Name = latin )
 
 # Create function: get "cleaned" names
-get_clean_names <- function( nam, fuzzy = 0 ) lcvp_search( nam, max.distance = fuzzy )
+get_clean_names   <- function( nam, fuzzy = 0.1 ) lcvp_search( nam, max.distance = fuzzy )
 
 # Clean names from the Leipzig's list of plants
-clean_l_bci         <- lapply( taxa_df_bci$Submitted_Name , get_clean_names )
-clean_df_bci        <- clean_l_bci %>% bind_rows
-clean_df_bci
+clean_l         <- lapply( taxa_df$Submitted_Name , get_clean_names )
+clean_df        <- clean_l %>% 
+                    bind_rows %>% 
+                    rename( Submitted_Name      = Search,
+                            First_matched_Name  = Input.Taxon,
+                            LCVP_Accepted_Taxon = Output.Taxon ) %>% 
+                    # check for accepted names
+                    mutate( mismatch_test = str_detect( First_matched_Name, 
+                                                        Submitted_Name ) )
 
-# check whether there are issues
-notfound_df_bci     <- clean_df_bci %>% subset( PL.comparison != 'identical' )
+# visual check of mismatches (These are all plausible typos!)
+clean_df %>% subset( !mismatch_test )
+
+# Check species without matches
+no_match_v <- setdiff( taxa_df$Submitted_Name, 
+                       clean_df$Submitted_Name )
 
 # Rerun Leipzig list with fuzzy matching
-reclean_l_bci       <- lapply( notfound_df_bci$Submitted_Name, get_clean_names, 5 )
-reclean_df_bci      <- reclean_l_bci %>% bind_rows
+reclean_l       <- lapply( no_match_v, lcvp_fuzzy_search )
+# visually select species identified with lcvp_fuzzy_search
+reclean_df      <- reclean_l %>% bind_rows
 
-# Examine final file
-reclean_df_bci
-
-# Prepare demographic table ----------------------
-
-# Check for missing/NULL/Inf values?
-# Check for sample size 0
-ggplot(data = bci_means, aes(site, growth_layer1_mean)) + geom_boxplot()
-#find way to repeat for all parameters
-
-# [Make boxplots to explore the data]
-
+# Final taxonomy files 
+taxa_nofuzzy    <- clean_df %>% subset( mismatch_test )
+taxa_fuzzy      <- reclean_df
+# Do "taxa unresolved" by hand
+taxa_unresvd    <- data.frame( Submitted_Name = no_match_v,
+                               site           = 'bci' )
+taxa_out        <- bind_rows( taxa_nofuzzy, taxa_fuzzy) 
+  
+# store resolved AND unresolved taxa
+write.csv( taxa_out, 'results/bci_taxa.csv',
+           row.names = F )
+write.csv( taxa_unresvd, 'results/bci_taxa_unresvd.csv',
+           row.names = F )
