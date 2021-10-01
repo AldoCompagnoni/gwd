@@ -39,12 +39,13 @@ write.csv( site_out, 'results/hkk_site.csv',
 # Prepare taxonomic table ------------------------
 
 # Produce the binomial used for checking
-taxa_df         <- dplyr::select( hkk_means, latin) %>%
+taxa_df         <- dplyr::select( hkk_means, latin ) %>%
   rename( Submitted_Name = latin )
 
 # Separate NAs
-taxa_df_na <- split(taxa_df, is.na(taxa_df$Submitted_Name))$`TRUE`
-taxa_df_na_rm <- split(taxa_df, is.na(taxa_df$Submitted_Name))$`FALSE`
+taxa_genus_df <- subset( taxa_df,  is.na( Submitted_Name ) )
+taxa_df       <- subset( taxa_df, !is.na( Submitted_Name ) )
+
 
 # Create function: get "cleaned" names
 get_clean_names   <- function( nam, fuzzy = 0.1 ) lcvp_search( nam, max.distance = fuzzy )
