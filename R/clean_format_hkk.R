@@ -42,7 +42,7 @@ write.csv( site_out, 'results/hkk_site.csv',
 taxa_df         <- dplyr::select( hkk_means, latin ) %>%
   rename( Submitted_Name = latin )
 
-# Separate NAs
+# Separate NAs - genus names only are unresolved
 taxa_genus_df <- subset( taxa_df,  is.na( Submitted_Name ) )
 taxa_df       <- subset( taxa_df, !is.na( Submitted_Name ) )
 
@@ -50,7 +50,7 @@ taxa_df       <- subset( taxa_df, !is.na( Submitted_Name ) )
 get_clean_names   <- function( nam, fuzzy = 0.1 ) lcvp_search( nam, max.distance = fuzzy )
 
 # Clean names from the Leipzig's list of plants
-clean_l         <- lapply( taxa_df$Submitted_Name , get_clean_names )
+clean_l         <- lapply( taxa_df$Submitted_Name, get_clean_names )
 clean_df        <- clean_l %>% 
   bind_rows %>% 
   rename( Submitted_Name      = Search,
@@ -64,26 +64,29 @@ clean_df        <- clean_l %>%
 mismatch_df <- clean_df %>% subset( !mismatch_test )
 check_mismatches <- lapply( mismatch_df$Submitted_Name, lcvp_fuzzy_search )
 # 7 plausible typos which remain in clean data frame
-# remove 5 unresolved species containing "cf." and "sp.1" from clean data frame - how?
-  
+
+# remove unresolved species containing "cf." and "sp.1" from clean data frame
+mismatch_unresvd <- data.frame("Submitted_Name" = grep( 'sp.1|cf.', mismatch_df$Submitted_Name, value = T ))
+clean_df_final <- data.frame("Submitted_Name" = grep( 'sp.1|cf.', clean_df$Submitted_Name, value = T, invert = T ))
+
 # Check species without matches
-no_match_v <- setdiff( taxa_df$Submitted_Name, 
-                       clean_df$Submitted_Name )
+no_match_v <- data.frame( "Submitted_Name" = setdiff( taxa_df$Submitted_Name, 
+                       clean_df$Submitted_Name ))
 
 # Rerun Leipzig list with fuzzy matching
 reclean_l       <- lapply( no_match_v, lcvp_fuzzy_search )
 reclean_df      <- reclean_l %>% bind_rows
 # visually select species identified with lcvp_fuzzy_search
-# Only genus specified, 2 taxa remain unresolved
+# No fuzzy match for 3 species, fuzzy matches for 2 taxa are not reliable (only identified to genus level)
 
 # Final taxonomy files 
-taxa_nofuzzy    <- clean_df
-taxa_fuzzy      <- reclean_df
-# Combine 
-taxa_out        <- bind_rows( taxa_nofuzzy, taxa_fuzzy )
+# Separate unresolved mismatches from clean data frame
+taxa_out        <- clean_df_final
+
 # Do "taxa unresolved" by hand (taxa with no matches found)
-taxa_unresvd    <- data.frame( Submitted_Name = no_match_v,
-                               site           = 'hkk' )
+taxa_unresvd    <- bind_rows( taxa_genus_df, mismatch_unresvd, no_match_v ) %>%
+  mutate( site = 'hkk' )
+  
 
 # store resolved AND unresolved taxa
 write.csv( taxa_out, 'results/hkk_taxa.csv',
