@@ -65,7 +65,7 @@ mismatch_df <- clean_df %>% subset( !mismatch_test )
 check_mismatches <- lapply( mismatch_df$Submitted_Name, lcvp_fuzzy_search )
 # 7 plausible typos which remain in clean data frame
 
-# remove unresolved species containing "cf." and "sp.1" from clean data frame
+# remove 5 unresolved species containing "cf." and "sp.1" from clean data frame
 mismatch_unresvd <- data.frame("Submitted_Name" = grep( 'sp.1|cf.', mismatch_df$Submitted_Name, value = T ))
 clean_df_final <- data.frame("Submitted_Name" = grep( 'sp.1|cf.', clean_df$Submitted_Name, value = T, invert = T ))
 
@@ -80,7 +80,6 @@ reclean_df      <- reclean_l %>% bind_rows
 # No fuzzy match for 3 species, fuzzy matches for 2 taxa are not reliable (only identified to genus level)
 
 # Final taxonomy files 
-# Separate unresolved mismatches from clean data frame
 taxa_out        <- clean_df_final
 
 # Do "taxa unresolved" by hand (taxa with no matches found)
