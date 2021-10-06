@@ -43,7 +43,7 @@ taxa_df         <- dplyr::select( ituri_edoro_means, latin) %>%
   rename( Submitted_Name = latin )
 
 # Separate NAs
-taxa_genus_df <- subset( taxa_df,  is.na( Submitted_Name ) )
+taxa_na_df <- subset( taxa_df,  is.na( Submitted_Name ) )
 taxa_df       <- subset( taxa_df, !is.na( Submitted_Name ) )
 
 # Create function: get "cleaned" names
@@ -83,7 +83,7 @@ reclean_df      <- reclean_l %>% bind_rows
 taxa_out        <- clean_df_final
 
 # Do "taxa unresolved" by hand (taxa with no matches found)
-taxa_unresvd    <- bind_rows( taxa_genus_df, mismatch_unresvd, no_match_v ) %>%
+taxa_unresvd    <- bind_rows( taxa_na_df, mismatch_unresvd, no_match_v ) %>%
   mutate( site = 'ituri_edoro' )
 
 # store resolved AND unresolved taxa
