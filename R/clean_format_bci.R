@@ -42,6 +42,10 @@ write.csv( site_out, 'results/bci_site.csv',
 taxa_df         <- dplyr::select( bci_means, latin) %>%
                      rename( Submitted_Name = latin )
 
+# Separate NAs - no NAs
+taxa_na_df <- subset( taxa_df,  is.na( Submitted_Name ) )
+taxa_df       <- subset( taxa_df, !is.na( Submitted_Name ) )
+
 # Create function: get "cleaned" names
 get_clean_names   <- function( nam, fuzzy = 0.1 ) lcvp_search( nam, max.distance = fuzzy )
 
