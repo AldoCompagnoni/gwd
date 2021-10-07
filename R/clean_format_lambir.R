@@ -42,6 +42,10 @@ write.csv( site_out, 'results/lambir_site.csv',
 taxa_df         <- dplyr::select( lambir_means, latin) %>%
   rename( Submitted_Name = latin )
 
+# Separate NAs - no NAs
+taxa_na_df <- subset( taxa_df,  is.na( Submitted_Name ) )
+taxa_df       <- subset( taxa_df, !is.na( Submitted_Name ) )
+
 # Create function: get "cleaned" names
 get_clean_names   <- function( nam, fuzzy = 0.1 ) lcvp_search( nam, max.distance = fuzzy )
 
@@ -59,7 +63,7 @@ clean_df        <- clean_l %>%
 # visual check of mismatches and alternative spellings
 mismatch_df <- clean_df %>% subset( !mismatch_test )
 check_mismatches <- lapply( mismatch_df$Submitted_Name, lcvp_fuzzy_search )
-# 4 plausible typos which remain in clean data frame
+# ... plausible typos which remain in clean data frame
 
 # Check species without matches
 no_match_v <- setdiff( taxa_df$Submitted_Name, 
