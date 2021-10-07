@@ -80,7 +80,15 @@ reclean_df      <- reclean_l %>% bind_rows
 # No fuzzy match for 3 species, fuzzy matches for 2 taxa are not reliable (only identified to genus level)
 
 # Final taxonomy files 
-taxa_out        <- clean_df_final
+# Clean taxa should have LCVP search results
+taxa_out        <- lapply( clean_df_final$Submitted_Name, get_clean_names ) %>% 
+  bind_rows %>% 
+  rename( Submitted_Name      = Search,
+          First_matched_Name  = Input.Taxon,
+          LCVP_Accepted_Taxon = Output.Taxon ) %>% 
+  # check for accepted names
+  mutate( mismatch_test = str_detect( First_matched_Name, 
+                                      Submitted_Name ) )
 
 # Do "taxa unresolved" by hand (taxa with no matches found)
 taxa_unresvd    <- bind_rows( taxa_genus_df, mismatch_unresvd, no_match_v ) %>%
