@@ -39,14 +39,18 @@ write.csv( site_out, 'results/fushan_site.csv',
 # Prepare taxonomic table ------------------------
 
 # Produce the binomial used for checking
-taxa_df         <- dplyr::select( fushan_means, latin) %>%
-  rename( Submitted_Name = latin )
+taxa_df         <- dplyr::select( fushan_means, latin, sp, genus, family, IDlevel ) %>%
+  rename( Submitted_Name = latin, Sp_Code = sp, Submitted_Genus = genus, Submitted_Family = family )
+
+# Separate NAs - no NAs
+taxa_na_df      <- subset( taxa_df,  is.na( Submitted_Name ) )
+taxa_na_rm_df   <- subset( taxa_df, !is.na( Submitted_Name ) )
 
 # Create function: get "cleaned" names
-get_clean_names   <- function( nam, fuzzy = 0.1 ) lcvp_search( nam, max.distance = fuzzy )
+get_clean_names <- function( nam, fuzzy = 0.1 ) lcvp_search( nam, max.distance = fuzzy )
 
 # Clean names from the Leipzig's list of plants
-clean_l         <- lapply( taxa_df$Submitted_Name , get_clean_names )
+clean_l         <- lapply( taxa_na_rm_df$Submitted_Name , get_clean_names )
 clean_df        <- clean_l %>% 
   bind_rows %>% 
   rename( Submitted_Name      = Search,
@@ -62,8 +66,8 @@ check_mismatches <- lapply( mismatch_df$Submitted_Name, lcvp_fuzzy_search )
 # 4 plausible typos which remain in clean data frame
 
 # Check species without matches
-no_match_v <- setdiff( taxa_df$Submitted_Name, 
-                       clean_df$Submitted_Name )
+no_match_v <- data.frame( "Submitted_Name" = setdiff( taxa_na_rm_df$Submitted_Name, 
+                       clean_df$Submitted_Name ))
 # 0 species without matches
 
 # Rerun Leipzig list with fuzzy matching
@@ -75,7 +79,8 @@ reclean_df      <- reclean_l %>% bind_rows
 taxa_nofuzzy    <- clean_df
 taxa_fuzzy      <- reclean_df
 # Combine non-fuzzy (including typos) and fuzzy matches
-taxa_out        <- bind_rows( taxa_nofuzzy, taxa_fuzzy)
+taxa_out        <- bind_rows( taxa_nofuzzy, taxa_fuzzy) %>%
+                    mutate( site = 'fushan' )
 # No unresolved taxa
 
 
