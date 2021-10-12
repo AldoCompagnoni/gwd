@@ -70,16 +70,9 @@ no_match_v <- data.frame( "Submitted_Name" = setdiff( taxa_na_rm_df$Submitted_Na
                        clean_df$Submitted_Name ))
 # 0 species without matches
 
-# Rerun Leipzig list with fuzzy matching
-reclean_l       <- lapply( no_match_v, lcvp_fuzzy_search )
-# visually select species identified with lcvp_fuzzy_search (only genus specified, all remain unresolved)
-reclean_df      <- reclean_l %>% bind_rows
 
 # Final taxonomy files 
-taxa_nofuzzy    <- clean_df
-taxa_fuzzy      <- reclean_df
-# Combine non-fuzzy (including typos) and fuzzy matches
-taxa_out        <- bind_rows( taxa_nofuzzy, taxa_fuzzy) %>%
+taxa_out        <- clean_df %>%
                     mutate( site = 'fushan' )
 # No unresolved taxa
 
