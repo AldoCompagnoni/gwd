@@ -39,18 +39,18 @@ write.csv( site_out, 'results/ituri_edoro_site.csv',
 # Prepare taxonomic table ------------------------
 
 # Produce the binomial used for checking
-taxa_df         <- dplyr::select( ituri_edoro_means, latin) %>%
-  rename( Submitted_Name = latin )
+taxa_df         <- dplyr::select( ituri_edoro_means, latin, sp, genus, family, IDlevel ) %>%
+  rename( Submitted_Name = latin, Sp_Code = sp, Submitted_Genus = genus, Submitted_Family = family )
 
 # Separate NAs
 taxa_na_df <- subset( taxa_df,  is.na( Submitted_Name ) )
-taxa_df       <- subset( taxa_df, !is.na( Submitted_Name ) )
+taxa_na_rm_df       <- subset( taxa_df, !is.na( Submitted_Name ) )
 
 # Create function: get "cleaned" names
 get_clean_names   <- function( nam, fuzzy = 0.1 ) lcvp_search( nam, max.distance = fuzzy )
 
 # Clean names from the Leipzig's list of plants
-clean_l         <- lapply( taxa_df$Submitted_Name , get_clean_names )
+clean_l         <- lapply( taxa_na_rm_df$Submitted_Name , get_clean_names )
 clean_df        <- clean_l %>% 
   bind_rows %>% 
   rename( Submitted_Name      = Search,
@@ -70,7 +70,7 @@ mismatch_unresvd <- data.frame("Submitted_Name" = grep( 'sp1|sp2|sp3|xx', mismat
 clean_df_final <- data.frame("Submitted_Name" = grep( 'sp1|sp2|sp3|xx', clean_df$Submitted_Name, value = T, invert = T ))
 
 # Check species without matches
-no_match_v <-  data.frame( "Submitted_Name" = setdiff( taxa_df$Submitted_Name, 
+no_match_v <-  data.frame( "Submitted_Name" = setdiff( taxa_na_rm_df$Submitted_Name, 
                                                        clean_df$Submitted_Name ))
 
 # Rerun Leipzig list with fuzzy matching
@@ -87,10 +87,11 @@ taxa_out        <- lapply( clean_df_final$Submitted_Name, get_clean_names ) %>%
           First_matched_Name  = Input.Taxon,
           LCVP_Accepted_Taxon = Output.Taxon ) %>% 
   mutate( mismatch_test = str_detect( First_matched_Name, 
-                                      Submitted_Name ) )
+                                      Submitted_Name ), site = 'ituri_edoro'  )
 
 # Do "taxa unresolved" by hand (taxa with no matches found)
 taxa_unresvd    <- bind_rows( taxa_na_df, mismatch_unresvd, no_match_v ) %>%
+  inner_join( taxa_df ) %>%
   mutate( site = 'ituri_edoro' )
 
 # store resolved AND unresolved taxa
