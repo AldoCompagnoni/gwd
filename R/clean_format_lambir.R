@@ -39,18 +39,25 @@ write.csv( site_out, 'results/lambir_site.csv',
 # Prepare taxonomic table ------------------------
 
 # Produce the binomial used for checking
-taxa_df         <- dplyr::select( lambir_means, latin) %>%
-  rename( Submitted_Name = latin )
+taxa_df         <- dplyr::select( lambir_means, latin, sp, genus, family, IDlevel ) %>%
+  rename( Submitted_Name = latin, Sp_Code = sp, Submitted_Genus = genus, Submitted_Family = family )
 
 # Separate NAs - no NAs
-taxa_na_df <- subset( taxa_df,  is.na( Submitted_Name ) )
-taxa_df       <- subset( taxa_df, !is.na( Submitted_Name ) )
+taxa_na_df      <- subset( taxa_df,  is.na( Submitted_Name ) )
+taxa_na_rm_df   <- subset( taxa_df, !is.na( Submitted_Name ) )
+
+# 'Shorea macroptera subsp. macroptera' prevents successful lcvp_search; move this taxon to unreserved
+taxa_na_rm_df   <- subset( taxa_na_rm_df, Submitted_Name != 'Shorea macroptera subsp. macroptera' )
+taxa_error      <- subset( taxa_na_rm_df, Submitted_Name == 'Shorea macroptera subsp. macroptera' )
 
 # Create function: get "cleaned" names
-get_clean_names   <- function( nam, fuzzy = 0.1 ) lcvp_search( nam, max.distance = fuzzy )
+get_clean_names <- function( nam, fuzzy = 0.1 ){
+  print( nam )
+  lcvp_search( nam, max.distance = fuzzy )
+}
 
 # Clean names from the Leipzig's list of plants
-clean_l         <- lapply( taxa_df$Submitted_Name , get_clean_names )
+clean_l         <- lapply( taxa_na_rm_df$Submitted_Name , get_clean_names )
 clean_df        <- clean_l %>% 
   bind_rows %>% 
   rename( Submitted_Name      = Search,
@@ -63,10 +70,27 @@ clean_df        <- clean_l %>%
 # visual check of mismatches and alternative spellings
 mismatch_df <- clean_df %>% subset( !mismatch_test )
 check_mismatches <- lapply( mismatch_df$Submitted_Name, lcvp_fuzzy_search )
-# ... plausible typos which remain in clean data frame
+# 967 plausible typos which remain in clean data frame
+
+# Cinnamomum tahyanum is likely C. tahijanum, not C. bahianum - remove from clean data frame and replace
+C_tahyanum_resvd <- check_mismatches[[54]] %>%
+                      mutate( Submitted_Name = 'Cinnamomum tahyanum' ) %>%
+                      rename( First_matched_Name  = Input.Taxon, 
+                              LCVP_Accepted_Taxon = Output.Taxon ) %>%
+                      subset( First_matched_Name == 'Cinnamomum tahijanum Kosterm.' )
+clean_df <- full_join(clean_df, C_tahyanum_resvd) %>%
+              subset( First_matched_Name != 'Cinnamomum bahianum Lukman.')
+
+# remove ... unresolved species containing "aff.", "cf.", "Sp 39", "nom. ined.", "jvl", "nom. incert.", "sp. nov.", "af." and "hairy teeth" from clean data frame
+# Archidendron casai and Castanopsis nivea are not plausible typos - move to unresolved
+# Unclear whether Kayea longipedicellata is Genus Calea or Genus Mabea - move to unresolved
+mismatch_unresvd <- data.frame("Submitted_Name" = grep(  'aff.|cf.|Sp 39|nom. ined.|jvl|nom. incert.|sp. nov.|af.|hairy teeth|Archidendron casai|Castanopsis nivea|Kayea longipedicellata', mismatch_df$Submitted_Name, value = T ))
+clean_df_final <- data.frame("Submitted_Name" = grep( 'aff.|cf.|Sp 39|nom. ined.|jvl|nom. incert.|sp. nov.|af.|hairy teeth|Archidendron casai|Castanopsis nivea|Kayea longipedicellata', clean_df$Submitted_Name, value = T, invert = T ))
+
+clean_compare <- setdiff( clean_df$Submitted_Name, clean_df_final$Submitted_Name )
 
 # Check species without matches
-no_match_v <- setdiff( taxa_df$Submitted_Name, 
+no_match_v <- setdiff( taxa_na_rm_df$Submitted_Name, 
                        clean_df$Submitted_Name )
 
 # Rerun Leipzig list with fuzzy matching
@@ -80,8 +104,10 @@ taxa_nofuzzy    <- clean_df
 taxa_fuzzy      <- reclean_df
 # Combine 
 taxa_out        <- bind_rows( taxa_nofuzzy, taxa_fuzzy )
-# Do "taxa unresolved" by hand (taxa with no matches found)
-taxa_unresvd    <- data.frame( Submitted_Name = no_match_v,
+
+# Do "taxa unresolved" by hand (taxa with no matches found); add in 'Shorea macroptera subsp. macroptera'
+taxa_unresvd    <- bind_rows( taxa_error, )
+  data.frame( Submitted_Name = no_match_v,
                                site           = 'lambir' )
 
 # store resolved AND unresolved taxa
