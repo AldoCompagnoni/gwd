@@ -12,6 +12,8 @@ library(LCVP)
 # devtools::install_github("idiv-biodiversity/lcvplants")
 library(lcvplants)
 library(leaflet)
+# install
+
 
 # Read in and filter data ------------------------
 
@@ -41,6 +43,9 @@ write.csv( site_out, 'results/luquillo_site.csv',
 # Produce the binomial used for checking
 taxa_df         <- dplyr::select( luquillo_means, latin, sp, genus, family, IDlevel ) %>%
   rename( Submitted_Name = latin, Sp_Code = sp, Submitted_Genus = genus, Submitted_Family = family )
+
+#Capitalise taxa so mismatch test works
+taxa_df         <- taxa_df %>% mutate(words, word = gsub("\\b([a-z])", "\\U\\1", word, perl=TRUE))
 
 # Separate NAs - genus names only are unresolved
 taxa_na_df      <- subset( taxa_df,  is.na( Submitted_Name ) )

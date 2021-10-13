@@ -101,3 +101,4 @@ write.csv( taxa_out, 'results/sinharaja_taxa.csv',
            row.names = F )
 write.csv( taxa_unresvd, 'results/sinharaja_taxa_unresvd.csv',
            row.names = F )
+
