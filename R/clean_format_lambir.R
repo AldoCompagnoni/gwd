@@ -47,8 +47,9 @@ taxa_na_df      <- subset( taxa_df,  is.na( Submitted_Name ) )
 taxa_na_rm_df   <- subset( taxa_df, !is.na( Submitted_Name ) )
 
 # 'Shorea macroptera subsp. macroptera' prevents successful lcvp_search; move this taxon to unreserved
-taxa_na_rm_df   <- subset( taxa_na_rm_df, Submitted_Name != 'Shorea macroptera subsp. macroptera' )
 taxa_error      <- subset( taxa_na_rm_df, Submitted_Name == 'Shorea macroptera subsp. macroptera' )
+taxa_na_rm_df   <- subset( taxa_na_rm_df, Submitted_Name != 'Shorea macroptera subsp. macroptera' )
+
 
 # Create function: get "cleaned" names
 get_clean_names <- function( nam, fuzzy = 0.1 ){
@@ -89,9 +90,12 @@ clean_df_final <- data.frame("Submitted_Name" = grep( 'aff.|cf.|Sp 39|nom. ined.
 
 clean_compare <- setdiff( clean_df$Submitted_Name, clean_df_final$Submitted_Name )
 
-# Check species without matches
-no_match_v <- setdiff( taxa_na_rm_df$Submitted_Name, 
-                       clean_df$Submitted_Name )
+# Check species without matches; to avoid duplicates, use Sp_Code as a place holder
+add_sp_code <- select(taxa_na_rm_df, Sp_Code, Submitted_Name)
+clean_df_coded <- inner_join(clean_df, add_sp_code)
+no_match_v <- data.frame( "Sp_Code" = setdiff( taxa_na_rm_df$Sp_Code, 
+                                                       clean_df_coded$Sp_Code ))
+no_match_v <- right_join( taxa_na_rm_df, no_match_v )
 
 # Rerun Leipzig list with fuzzy matching
 reclean_l       <- lapply( no_match_v, lcvp_fuzzy_search )
