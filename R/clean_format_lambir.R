@@ -85,8 +85,9 @@ clean_df <- full_join(clean_df, C_tahyanum_resvd) %>%
 # remove ... unresolved species containing "aff.", "cf.", "Sp 39", "nom. ined.", "jvl", "nom. incert.", "sp. nov.", "af." and "hairy teeth" from clean data frame
 # Archidendron casai and Castanopsis nivea are not plausible typos - move to unresolved
 # Unclear whether Kayea longipedicellata is Genus Calea or Genus Mabea - move to unresolved
-mismatch_unresvd <- data.frame( "Submitted_Name" = grep(  'aff.|cf.|Sp 39|ined.|jvl|incert.|sp. nov.|af.|hairy teeth|Archidendron casai|Castanopsis nivea|Kayea longipedicellata', mismatch_df$Submitted_Name, value = T )) 
-mismatch_unresvd <- mismatch_unresvd %>% inner_join( taxa_df ) %>% distinct()
+mismatch_unresvd <- data.frame( "Submitted_Name" = grep(  'aff.|cf.|Sp 39|ined.|jvl|incert.|sp. nov.|af.|hairy teeth|Archidendron casai|Castanopsis nivea|Kayea longipedicellata', mismatch_df$Submitted_Name, value = T )) %>%
+  inner_join( taxa_df ) %>%
+  distinct()
 matched_df <- clean_df %>% subset( mismatch_test )
 clean_df_final <- data.frame( "Submitted_Name" = grep( 'aff.|cf.|Sp 39|ined.|jvl|incert.|sp. nov.|af.|hairy teeth|Archidendron casai|Castanopsis nivea|Kayea longipedicellata', mismatch_df$Submitted_Name, value = T, invert = T )) %>% full_join( matched_df )
 
