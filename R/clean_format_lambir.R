@@ -112,7 +112,7 @@ taxa_out        <- lapply( clean_df_final$Submitted_Name, get_clean_names ) %>%
           LCVP_Accepted_Taxon = Output.Taxon ) %>% 
   # check for accepted names
   mutate( mismatch_test = str_detect( First_matched_Name, 
-                                      Submitted_Name ), site = 'luquillo' )
+                                      Submitted_Name ), site = 'lambir' )
 
 # Do "taxa unresolved" by hand (taxa with no matches found and unresolved mismatches); add in 'Shorea macroptera subsp. macroptera'
 
