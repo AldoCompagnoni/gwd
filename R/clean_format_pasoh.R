@@ -42,6 +42,20 @@ write.csv( site_out, 'results/pasoh_site.csv',
 taxa_df         <- dplyr::select( pasoh_means, latin, sp, genus, family, IDlevel ) %>%
   rename( Submitted_Name = latin, Sp_Code = sp, Submitted_Genus = genus, Submitted_Family = family )
 
+#Capitalise taxa so mismatch test works
+tolower( taxa_df$SSubmitted_Name )
+upper_case_genus <- function( x ){
+  
+  x %>% 
+    separate( Submitted_Name, c('gen','spp'), 
+              sep = ' ', extra = 'merge' ) %>% 
+    mutate( gen   = str_to_title(gen) ) %>% 
+    mutate( Submitted_Name = paste0(gen,' ',spp) ) %>% 
+    dplyr::select( -gen, -spp)
+  
+}
+taxa_df <- upper_case_genus( taxa_df )
+
 # Separate NAs - genus names only are unresolved
 taxa_na_df      <- subset( taxa_df,  is.na( Submitted_Name ) )
 taxa_na_rm_df   <- subset( taxa_df, !is.na( Submitted_Name ) )
