@@ -104,7 +104,8 @@ taxa_out        <- lapply( clean_df_final$Submitted_Name, get_clean_names ) %>%
 # Do "taxa unresolved" by hand (taxa with no matches found), and add back in the submitted genus, family and IDlevel to enable future identification
 taxa_unresvd    <- bind_rows( mismatch_unresvd, no_match_v ) %>%
   inner_join( taxa_df ) %>%
-  mutate( site = 'luquillo' ) 
+  mutate( site = 'luquillo' ) %>%
+  distinct()
 
 
 # store resolved AND unresolved taxa
