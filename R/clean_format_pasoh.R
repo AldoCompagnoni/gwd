@@ -43,7 +43,7 @@ taxa_df         <- dplyr::select( pasoh_means, latin, sp, genus, family, IDlevel
   rename( Submitted_Name = latin, Sp_Code = sp, Submitted_Genus = genus, Submitted_Family = family )
 
 #Capitalise taxa so mismatch test works
-tolower( taxa_df$SSubmitted_Name )
+taxa_df$Submitted_Name <- tolower( taxa_df$Submitted_Name )
 upper_case_genus <- function( x ){
   
   x %>% 
@@ -56,7 +56,7 @@ upper_case_genus <- function( x ){
 }
 taxa_df <- upper_case_genus( taxa_df )
 
-# Separate NAs - genus names only are unresolved
+# Separate NAs - no NAs
 taxa_na_df      <- subset( taxa_df,  is.na( Submitted_Name ) )
 taxa_na_rm_df   <- subset( taxa_df, !is.na( Submitted_Name ) )
 
@@ -77,21 +77,24 @@ clean_df        <- clean_l %>%
 # visual check of mismatches and alternative spellings
 mismatch_df <- clean_df %>% subset( !mismatch_test )
 check_mismatches <- lapply( mismatch_df$Submitted_Name, lcvp_fuzzy_search )
-# 7 plausible typos which remain in clean data frame
+# 54 plausible typos which remain in clean data frame
+#"Eugenia ceraina" could be any of three plausible typos - move to uresolved table 
 
-# remove 5 unresolved species containing "cf." and "sp.1" from clean data frame
-mismatch_unresvd <- data.frame("Submitted_Name" = grep( 'sp.1|cf.', mismatch_df$Submitted_Name, value = T ))
-clean_df_final <- data.frame("Submitted_Name" = grep( 'sp.1|cf.', clean_df$Submitted_Name, value = T, invert = T ))
+# remove 22 unresolved species containing "species" or "ceraina" from clean data frame
+mismatch_unresvd <- data.frame("Submitted_Name" = grep( 'species|ceraina', mismatch_df$Submitted_Name, value = T ))
+clean_df_final <- data.frame("Submitted_Name" = grep( 'species|ceraina', clean_df$Submitted_Name, value = T, invert = T ))
 
-# Check species without matches
-no_match_v <- data.frame( "Submitted_Name" = setdiff( taxa_na_rm_df$Submitted_Name, 
-                                                      clean_df$Submitted_Name ))
+# Check species without matches; to avoid duplicates, use Sp_Code as a place holder
+add_sp_code <- select(taxa_na_rm_df, Sp_Code, Submitted_Name)
+clean_df_coded <- inner_join( clean_df, add_sp_code )
+no_match_v <- data.frame( "Sp_Code" = setdiff( taxa_na_rm_df$Sp_Code, 
+                                               clean_df_coded$Sp_Code ))
+no_match_v <- right_join( taxa_na_rm_df, no_match_v )
 
 # Rerun Leipzig list with fuzzy matching
 reclean_l       <- lapply( no_match_v, lcvp_fuzzy_search )
 reclean_df      <- reclean_l %>% bind_rows
-# visually select species identified with lcvp_fuzzy_search
-# No fuzzy match for 3 species, fuzzy matches for 2 taxa are not reliable (only identified to genus level)
+# Fuzzy matches for these 61 taxa are not available
 
 # Final taxonomy files 
 # Clean taxa should have LCVP search results
@@ -105,8 +108,9 @@ taxa_out        <- lapply( clean_df_final$Submitted_Name, get_clean_names ) %>%
                                       Submitted_Name ), site = 'pasoh' )
 
 # Do "taxa unresolved" by hand (taxa with no matches found), and add back in the submitted genus, family and IDlevel to enable future identification
-taxa_unresvd    <- bind_rows( taxa_na_df, mismatch_unresvd, no_match_v ) %>%
+taxa_unresvd    <- mismatch_unresvd %>%
   inner_join( taxa_df ) %>%
+  bind_rows( no_match_v ) %>%
   mutate( site = 'pasoh' ) 
 
 
