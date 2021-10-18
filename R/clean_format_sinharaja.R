@@ -55,12 +55,15 @@ upper_case_genus <- function( x ){
 }
 taxa_df <- upper_case_genus( taxa_df )
 
-# Separate NAs - genus names only are unresolved
+# Separate NAs - no NAs
 taxa_na_df      <- subset( taxa_df,  is.na( Submitted_Name ) )
 taxa_na_rm_df   <- subset( taxa_df, !is.na( Submitted_Name ) )
 
 # Create function: get "cleaned" names
-get_clean_names   <- function( nam, fuzzy = 0.1 ) lcvp_search( nam, max.distance = fuzzy )
+get_clean_names <- function( nam, fuzzy = 0.1 ){
+  print( nam )
+  lcvp_search( nam, max.distance = fuzzy )
+}
 
 # Clean names from the Leipzig's list of plants
 clean_l         <- lapply( taxa_na_rm_df$Submitted_Name, get_clean_names )
@@ -76,11 +79,7 @@ clean_df        <- clean_l %>%
 # visual check of mismatches and alternative spellings
 mismatch_df <- clean_df %>% subset( !mismatch_test )
 check_mismatches <- lapply( mismatch_df$Submitted_Name, lcvp_fuzzy_search )
-# 7 plausible typos which remain in clean data frame
-
-# remove 5 unresolved species containing "cf." and "sp.1" from clean data frame
-mismatch_unresvd <- data.frame("Submitted_Name" = grep( 'sp.1|cf.', mismatch_df$Submitted_Name, value = T ))
-clean_df_final <- data.frame("Submitted_Name" = grep( 'sp.1|cf.', clean_df$Submitted_Name, value = T, invert = T ))
+# 15 plausible typos which remain in clean data frame
 
 # Check species without matches
 no_match_v <- data.frame( "Submitted_Name" = setdiff( taxa_na_rm_df$Submitted_Name, 
@@ -90,11 +89,11 @@ no_match_v <- data.frame( "Submitted_Name" = setdiff( taxa_na_rm_df$Submitted_Na
 reclean_l       <- lapply( no_match_v, lcvp_fuzzy_search )
 reclean_df      <- reclean_l %>% bind_rows
 # visually select species identified with lcvp_fuzzy_search
-# No fuzzy match for 3 species, fuzzy matches for 2 taxa are not reliable (only identified to genus level)
+# No fuzzy matches for 19 taxa
 
 # Final taxonomy files 
 # Clean taxa should have LCVP search results
-taxa_out        <- lapply( clean_df_final$Submitted_Name, get_clean_names ) %>% 
+taxa_out        <- lapply( clean_df$Submitted_Name, get_clean_names ) %>% 
   bind_rows %>% 
   rename( Submitted_Name      = Search,
           First_matched_Name  = Input.Taxon,
@@ -104,7 +103,7 @@ taxa_out        <- lapply( clean_df_final$Submitted_Name, get_clean_names ) %>%
                                       Submitted_Name ), site = 'sinharaja' )
 
 # Do "taxa unresolved" by hand (taxa with no matches found), and add back in the submitted genus, family and IDlevel to enable future identification
-taxa_unresvd    <- bind_rows( taxa_na_df, mismatch_unresvd, no_match_v ) %>%
+taxa_unresvd    <-  no_match_v %>%
   inner_join( taxa_df ) %>%
   mutate( site = 'sinharaja' ) 
 
