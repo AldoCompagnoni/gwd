@@ -39,18 +39,21 @@ write.csv( site_out, 'results/yasuni_site.csv',
 # Prepare taxonomic table ------------------------
 
 # Produce the binomial used for checking
-taxa_df         <- dplyr::select( yasuni_means, latin) %>%
-  rename( Submitted_Name = latin )
+taxa_df         <- dplyr::select( yasuni_means, latin, sp, genus, family, IDlevel ) %>%
+  rename( Submitted_Name = latin, Sp_Code = sp, Submitted_Genus = genus, Submitted_Family = family )
 
 # Separate NAs
-taxa_na_df <- subset( taxa_df,  is.na( Submitted_Name ) )
-taxa_df       <- subset( taxa_df, !is.na( Submitted_Name ) )
+taxa_na_df      <- subset( taxa_df,  is.na( Submitted_Name ) )
+taxa_na_rm_df   <- subset( taxa_df, !is.na( Submitted_Name ) )
 
 # Create function: get "cleaned" names
-get_clean_names   <- function( nam, fuzzy = 0.1 ) lcvp_search( nam, max.distance = fuzzy )
+get_clean_names <- function( nam, fuzzy = 0.1 ){
+  print( nam )
+  lcvp_search( nam, max.distance = fuzzy )
+}
 
 # Clean names from the Leipzig's list of plants
-clean_l         <- lapply( taxa_df$Submitted_Name , get_clean_names )
+clean_l         <- lapply( taxa_na_rm_df$Submitted_Name , get_clean_names )
 clean_df        <- clean_l %>% 
   bind_rows %>% 
   rename( Submitted_Name      = Search,
@@ -63,26 +66,106 @@ clean_df        <- clean_l %>%
 # visual check of mismatches and alternative spellings
 mismatch_df <- clean_df %>% subset( !mismatch_test )
 check_mismatches <- lapply( mismatch_df$Submitted_Name, lcvp_fuzzy_search )
-# ... plausible typos which remain in clean data frame
+# 25 plausible typos which remain in clean data frame
+
+# several potential typos are possible for 6 taxa; leave them in unresolved table
+# no mismatch is plausible for 60 taxa; leave them in unresolved table
+unresvd_list <- c('Bunchosia myrt',
+                  'Calyptranthes punteada',
+                  'Eugenia margot',
+                  'Miconia corine',
+                  'Piper obglab',
+                  'Piper obtomen',
+                  'Acalypha pub',
+                  'Annona mosaic',
+                  'Brownea lore',
+                  'Calyptranthes grancauli',
+                  'Caryodaphnopsis chica',
+                  'Chrysochlamys hugo',
+                  'Chrysophyllum minor',
+                  'Chrysophyllum tremi',
+                  'Coccoloba jill',
+                  'Coccoloba ninfi',
+                  'Coccoloba papel',
+                  'Colubrina arbol',
+                  'Dacryodes gorda',
+                  'Endlicheria dori',
+                  'Eschweilera giga',
+                  'Heisteria grande',
+                  'Inga 3crasa',
+                  'Inga 3oscura',
+                  'Inga 6cuadra',
+                  'Lacistema med',
+                  'Licania filo',
+                  'Licania opaca',
+                  'Margaritaria roja',
+                  'Marila comun',
+                  'Matayba ocho',
+                  'Maytenus ala',
+                  'Meliosma doly',
+                  'Miconia karina',
+                  'Miconia tipica',
+                  'Neea aniboid',
+                  'Neea claudia',
+                  'Neea garci',
+                  'Neea gigante',
+                  'Neea micro',
+                  'Ocotea luis',
+                  'Pera duguet',
+                  'Picramnia mini',
+                  'Piper bulada',
+                  'Piper obchic',
+                  'Piper obvil',
+                  'Piper renato',
+                  'Piper sesivil',
+                  'Plinia unop',
+                  'Pouteria redondita',
+                  'Psychotria dracula',
+                  'Quiina mediana',
+                  'Randia manolo',
+                  'Rudgea fina',
+                  'Sloanea guia',
+                  'Sloanea oak',
+                  'Sloanea oppd',
+                  'Solanum granmini',
+                  'Talisia 2-retic',
+                  'Terminalia ob',
+                  'Tovomita tyana',
+                  'Guatteria hiena',
+                  'Zanthoxylum nervi',
+                  'Zanthoxylum perp',
+                  'Zanthoxylum suave',
+                  'Alibertia lance'
+)
+mismatch_unresvd <- data.frame( "Submitted_Name" = unresvd_list ) %>% 
+  inner_join( taxa_df )
+clean_df_final <- data.frame( "Submitted_Name" = setdiff( clean_df$Submitted_Name, 
+                                                          mismatch_unresvd$Submitted_Name ) )
 
 # Check species without matches
-no_match_v <- setdiff( taxa_df$Submitted_Name, 
-                       clean_df$Submitted_Name )
+no_match_v <- data.frame( "Submitted_Name" = setdiff( taxa_na_rm_df$Submitted_Name, 
+                                                        clean_df$Submitted_Name ) ) %>% 
+  inner_join( taxa_df )
 
 # Rerun Leipzig list with fuzzy matching
-reclean_l       <- lapply( no_match_v, lcvp_fuzzy_search )
+reclean_l       <- lapply( no_match_v$Submitted_Name, lcvp_fuzzy_search )
 reclean_df      <- reclean_l %>% bind_rows
-# visually select species identified with lcvp_fuzzy_search
-# Only genus specified, 2 taxa remain unresolved
+# Fuzzy matches for these 218 taxa are not available
 
 # Final taxonomy files 
-taxa_nofuzzy    <- clean_df
-taxa_fuzzy      <- reclean_df
-# Combine 
-taxa_out        <- bind_rows( taxa_nofuzzy, taxa_fuzzy )
-# Do "taxa unresolved" by hand (taxa with no matches found)
-taxa_unresvd    <- data.frame( Submitted_Name = no_match_v,
-                               site           = 'yasuni' )
+taxa_out        <- lapply( clean_df_final$Submitted_Name, get_clean_names ) %>% 
+  bind_rows %>% 
+  rename( Submitted_Name      = Search,
+          First_matched_Name  = Input.Taxon,
+          LCVP_Accepted_Taxon = Output.Taxon ) %>% 
+  # check for accepted names
+  mutate( mismatch_test = str_detect( First_matched_Name, 
+                                      Submitted_Name ), site = 'yasuni' )
+
+# Do "taxa unresolved" by hand (taxa with no matches found), and add back in the submitted genus, family and IDlevel to enable future identification
+taxa_unresvd    <- bind_rows( taxa_na_df, mismatch_unresvd, no_match_v ) %>%
+  mutate( site = 'yasuni' ) %>%
+  distinct()
 
 # store resolved AND unresolved taxa
 write.csv( taxa_out, 'results/yasuni_taxa.csv',
