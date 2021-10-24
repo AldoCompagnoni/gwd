@@ -172,3 +172,24 @@ write.csv( taxa_out, 'results/yasuni_taxa.csv',
            row.names = F )
 write.csv( taxa_unresvd, 'results/yasuni_taxa_unresvd.csv',
            row.names = F )
+
+# Prepare demographic table --------------------------------------
+
+# distiguish taxa with sample size 0 for each growth layer (1-4) and survival layer (1-4)
+yasuni_means <- yasuni_means %>% mutate( "growth_layer_1_imputed"   = grepl( "^0", growth_layer_1_obs ),
+                                               "growth_layer_2_imputed"   = grepl( "^0", growth_layer_2_obs ), 
+                                               "growth_layer_3_imputed"   = grepl( "^0", growth_layer_3_obs ), 
+                                               "growth_layer_4_imputed"   = grepl( "^0", growth_layer_4_obs ), 
+                                               "survival_layer_1_imputed" = grepl( "^0", survival_layer_1_obs ), 
+                                               "survival_layer_2_imputed" = grepl( "^0", survival_layer_2_obs ), 
+                                               "survival_layer_3_imputed" = grepl( "^0", survival_layer_3_obs ), 
+                                               "survival_layer_4_imputed" = grepl( "^0", survival_layer_4_obs ) )
+
+yasuni_medians <- yasuni_medians %>% mutate( "growth_layer_1_imputed"   = grepl( "^0", growth_layer_1_obs ),
+                                                   "growth_layer_2_imputed"   = grepl( "^0", growth_layer_2_obs ), 
+                                                   "growth_layer_3_imputed"   = grepl( "^0", growth_layer_3_obs ), 
+                                                   "growth_layer_4_imputed"   = grepl( "^0", growth_layer_4_obs ), 
+                                                   "survival_layer_1_imputed" = grepl( "^0", survival_layer_1_obs ), 
+                                                   "survival_layer_2_imputed" = grepl( "^0", survival_layer_2_obs ), 
+                                                   "survival_layer_3_imputed" = grepl( "^0", survival_layer_3_obs ), 
+                                                   "survival_layer_4_imputed" = grepl( "^0", survival_layer_4_obs ) )
