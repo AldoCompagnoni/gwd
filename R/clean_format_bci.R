@@ -104,3 +104,12 @@ bci_means <- bci_means %>% mutate( "growth_layer_1_imputed"   = grepl( "^0", gro
                                    "survival_layer_2_imputed" = grepl( "^0", survival_layer_2_obs ), 
                                    "survival_layer_3_imputed" = grepl( "^0", survival_layer_3_obs ), 
                                    "survival_layer_4_imputed" = grepl( "^0", survival_layer_4_obs ) )
+
+bci_medians <- bci_medians %>% mutate( "growth_layer_1_imputed"   = grepl( "^0", growth_layer_1_obs ),
+                                   "growth_layer_2_imputed"   = grepl( "^0", growth_layer_2_obs ), 
+                                   "growth_layer_3_imputed"   = grepl( "^0", growth_layer_3_obs ), 
+                                   "growth_layer_4_imputed"   = grepl( "^0", growth_layer_4_obs ), 
+                                   "survival_layer_1_imputed" = grepl( "^0", survival_layer_1_obs ), 
+                                   "survival_layer_2_imputed" = grepl( "^0", survival_layer_2_obs ), 
+                                   "survival_layer_3_imputed" = grepl( "^0", survival_layer_3_obs ), 
+                                   "survival_layer_4_imputed" = grepl( "^0", survival_layer_4_obs ) )
