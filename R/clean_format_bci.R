@@ -127,7 +127,7 @@ bci_means <- bci_means %>% mutate( "growth_layer_1_CI90_width"   = growth_layer1
                                    "survival_layer_3_CI90_width" = survival_layer3_CI.95 - survival_layer3_CI.05, 
                                    "survival_layer_4_CI90_width" = survival_layer4_CI.95 - survival_layer4_CI.05 )
 
-# Load plots in a 2x4 grid 
+# Load plots in a 2x2 grid 
 growth_layer_1_graph <- ggplot( data = subset( bci_means, growth_layer_1_imputed != TRUE), aes( x = growth_layer_1_obs, y = growth_layer_1_CI90_width ) ) + geom_point() + labs( x = "sample size", y = "90% CI width", title = "Growth Layer 1")
 growth_layer_2_graph <- ggplot( data = subset( bci_means, growth_layer_2_imputed != TRUE), aes( x = growth_layer_2_obs, y = growth_layer_2_CI90_width ) ) + geom_point() + labs( x = "sample size", y = "90% CI width", title = "Growth Layer 2")
 growth_layer_3_graph <- ggplot( data = subset( bci_means, growth_layer_3_imputed != TRUE), aes( x = growth_layer_3_obs, y = growth_layer_3_CI90_width ) ) + geom_point() + labs( x = "sample size", y = "90% CI width", title = "Growth Layer 3")
