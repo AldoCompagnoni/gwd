@@ -117,35 +117,122 @@ write.csv( taxa_unresvd, 'results/luquillo_taxa_unresvd.csv',
 
 # Prepare demographic table --------------------------------------
 
-# distiguish taxa with sample size 0 for each growth layer (1-4) and survival layer (1-4)
-luquillo_means <- luquillo_means %>% mutate( "growth_layer_1_imputed"   = grepl( "^0", growth_layer_1_obs ),
-                                         "growth_layer_2_imputed"   = grepl( "^0", growth_layer_2_obs ), 
-                                         "growth_layer_3_imputed"   = grepl( "^0", growth_layer_3_obs ), 
-                                         "growth_layer_4_imputed"   = grepl( "^0", growth_layer_4_obs ), 
-                                         "survival_layer_1_imputed" = grepl( "^0", survival_layer_1_obs ), 
-                                         "survival_layer_2_imputed" = grepl( "^0", survival_layer_2_obs ), 
-                                         "survival_layer_3_imputed" = grepl( "^0", survival_layer_3_obs ), 
-                                         "survival_layer_4_imputed" = grepl( "^0", survival_layer_4_obs ) )
+taxa_out <- read.csv( 'results/luquillo_taxa.csv' , header = TRUE)
+taxa_unresvd <- read.csv( 'results/luquillo_taxa_unresvd.csv' , header = TRUE)
 
-luquillo_medians <- luquillo_medians %>% mutate( "growth_layer_1_imputed"   = grepl( "^0", growth_layer_1_obs ),
-                                             "growth_layer_2_imputed"   = grepl( "^0", growth_layer_2_obs ), 
-                                             "growth_layer_3_imputed"   = grepl( "^0", growth_layer_3_obs ), 
-                                             "growth_layer_4_imputed"   = grepl( "^0", growth_layer_4_obs ), 
-                                             "survival_layer_1_imputed" = grepl( "^0", survival_layer_1_obs ), 
-                                             "survival_layer_2_imputed" = grepl( "^0", survival_layer_2_obs ), 
-                                             "survival_layer_3_imputed" = grepl( "^0", survival_layer_3_obs ), 
-                                             "survival_layer_4_imputed" = grepl( "^0", survival_layer_4_obs ) )
+# Select variables for demographic means tables - one for clean taxa and another for unresolved taxa
+# Get demographic variables from luquillo_means
+demog_means_df         <- select( luquillo_means, -c( genus, family, IDlevel ) ) %>%
+  rename( Submitted_Name = latin, Sp_Code = sp )
+
+#Capitalise taxa in demog_means_df
+upper_case_genus <- function( x ){
+  
+  x %>% 
+    separate( Submitted_Name, c('gen','spp'), 
+              sep = ' ', extra = 'merge' ) %>% 
+    mutate( gen   = str_to_title(gen) ) %>% 
+    mutate( Submitted_Name = paste0(gen,' ',spp) ) %>% 
+    dplyr::select( -gen, -spp)
+  
+}
+demog_means_df <- upper_case_genus( demog_means_df )
+
+
+# Join clean taxa to rest of schema via accepted names
+demog_means_df_clean   <- data.frame( "Submitted_Name" = taxa_out$Submitted_Name,
+                                      "LCVP_Accepted_Taxon" = taxa_out$LCVP_Accepted_Taxon ) %>%
+  inner_join( demog_means_df ) %>%
+  select( -c( Submitted_Name, Sp_Code ) )
+
+# Join unresolved taxa to rest of schema via species codes
+demog_means_df_unresvd <- data.frame( "Submitted_Name" = taxa_unresvd$Submitted_Name,
+                                      "Sp_Code" = taxa_unresvd$Sp_Code ) %>%
+  inner_join( demog_means_df )
+
+# Distiguish taxa with sample size 0 for each growth layer (1-4) and survival layer (1-4)
+demog_means_df_clean <- demog_means_df_clean %>% 
+  mutate( "growth_layer_1_imputed"   = grepl( "^0", growth_layer_1_obs ),
+          "growth_layer_2_imputed"   = grepl( "^0", growth_layer_2_obs ), 
+          "growth_layer_3_imputed"   = grepl( "^0", growth_layer_3_obs ), 
+          "growth_layer_4_imputed"   = grepl( "^0", growth_layer_4_obs ), 
+          "survival_layer_1_imputed" = grepl( "^0", survival_layer_1_obs ), 
+          "survival_layer_2_imputed" = grepl( "^0", survival_layer_2_obs ), 
+          "survival_layer_3_imputed" = grepl( "^0", survival_layer_3_obs ), 
+          "survival_layer_4_imputed" = grepl( "^0", survival_layer_4_obs ) )
+
+demog_means_df_unresvd <- demog_means_df_unresvd %>% 
+  mutate( "growth_layer_1_imputed"   = grepl( "^0", growth_layer_1_obs ),
+          "growth_layer_2_imputed"   = grepl( "^0", growth_layer_2_obs ), 
+          "growth_layer_3_imputed"   = grepl( "^0", growth_layer_3_obs ), 
+          "growth_layer_4_imputed"   = grepl( "^0", growth_layer_4_obs ), 
+          "survival_layer_1_imputed" = grepl( "^0", survival_layer_1_obs ), 
+          "survival_layer_2_imputed" = grepl( "^0", survival_layer_2_obs ), 
+          "survival_layer_3_imputed" = grepl( "^0", survival_layer_3_obs ), 
+          "survival_layer_4_imputed" = grepl( "^0", survival_layer_4_obs ) )
+
+# store demographic means table for resolved AND unresolved taxa
+write.csv( demog_means_df_clean, 'results/luquillo_demog_means.csv',
+           row.names = F )
+write.csv( demog_means_df_unresvd, 'results/luquillo_demog_means_unresvd.csv',
+           row.names = F )
+
+# Select variables for median tables - one for clean taxa and another for unresolved taxa
+# Get demographic variables from luquillo_medians
+demog_medians_df         <- select( luquillo_medians, -c( genus, family, IDlevel ) ) %>%
+  rename( Submitted_Name = latin, Sp_Code = sp )
+
+#Capitalise taxa in demog_medians_df
+demog_medians_df <- upper_case_genus( demog_medians_df )
+
+# Join clean taxa to rest of schema via accepted names
+demog_medians_df_clean   <- data.frame( "Submitted_Name" = taxa_out$Submitted_Name,
+                                        "LCVP_Accepted_Taxon" = taxa_out$LCVP_Accepted_Taxon ) %>%
+  inner_join( demog_medians_df ) %>%
+  select( -c( Submitted_Name, Sp_Code ) )
+
+# Join unresolved taxa to rest of schema via species codes
+demog_medians_df_unresvd <- data.frame( "Submitted_Name" = taxa_unresvd$Submitted_Name,
+                                        "Sp_Code" = taxa_unresvd$Sp_Code ) %>%
+  inner_join( demog_medians_df )
+
+# Distiguish taxa with sample size 0 for each growth layer (1-4) and survival layer (1-4)
+demog_medians_df_clean <- demog_medians_df_clean %>% 
+  mutate( "growth_layer_1_imputed"   = grepl( "^0", growth_layer_1_obs ),
+          "growth_layer_2_imputed"   = grepl( "^0", growth_layer_2_obs ), 
+          "growth_layer_3_imputed"   = grepl( "^0", growth_layer_3_obs ), 
+          "growth_layer_4_imputed"   = grepl( "^0", growth_layer_4_obs ), 
+          "survival_layer_1_imputed" = grepl( "^0", survival_layer_1_obs ), 
+          "survival_layer_2_imputed" = grepl( "^0", survival_layer_2_obs ), 
+          "survival_layer_3_imputed" = grepl( "^0", survival_layer_3_obs ), 
+          "survival_layer_4_imputed" = grepl( "^0", survival_layer_4_obs ) )
+
+demog_medians_df_unresvd <- demog_medians_df_unresvd %>% 
+  mutate( "growth_layer_1_imputed"   = grepl( "^0", growth_layer_1_obs ),
+          "growth_layer_2_imputed"   = grepl( "^0", growth_layer_2_obs ), 
+          "growth_layer_3_imputed"   = grepl( "^0", growth_layer_3_obs ), 
+          "growth_layer_4_imputed"   = grepl( "^0", growth_layer_4_obs ), 
+          "survival_layer_1_imputed" = grepl( "^0", survival_layer_1_obs ), 
+          "survival_layer_2_imputed" = grepl( "^0", survival_layer_2_obs ), 
+          "survival_layer_3_imputed" = grepl( "^0", survival_layer_3_obs ), 
+          "survival_layer_4_imputed" = grepl( "^0", survival_layer_4_obs ) )
+
+# store demographic medians table for resolved AND unresolved taxa
+write.csv( demog_medians_df_clean, 'results/luquillo_demog_medians.csv',
+           row.names = F )
+write.csv( demog_medians_df_unresvd, 'results/luquillo_demog_medians_unresvd.csv',
+           row.names = F )
 
 # Analyse relationship between sample size and CI width
 # Create variable for CI width
 luquillo_means <- luquillo_means %>% mutate( "growth_layer_1_CI90_width"   = growth_layer1_CI.95 - growth_layer1_CI.05,
-                                   "growth_layer_2_CI90_width"   = growth_layer2_CI.95 - growth_layer2_CI.05, 
-                                   "growth_layer_3_CI90_width"   = growth_layer3_CI.95 - growth_layer3_CI.05, 
-                                   "growth_layer_4_CI90_width"   = growth_layer4_CI.95 - growth_layer4_CI.05, 
-                                   "survival_layer_1_CI90_width" = survival_layer1_CI.95 - survival_layer1_CI.05, 
-                                   "survival_layer_2_CI90_width" = survival_layer2_CI.95 - survival_layer2_CI.05, 
-                                   "survival_layer_3_CI90_width" = survival_layer3_CI.95 - survival_layer3_CI.05, 
-                                   "survival_layer_4_CI90_width" = survival_layer4_CI.95 - survival_layer4_CI.05 )
+                                                 "growth_layer_2_CI90_width"   = growth_layer2_CI.95 - growth_layer2_CI.05, 
+                                                 "growth_layer_3_CI90_width"   = growth_layer3_CI.95 - growth_layer3_CI.05, 
+                                                 "growth_layer_4_CI90_width"   = growth_layer4_CI.95 - growth_layer4_CI.05, 
+                                                 "survival_layer_1_CI90_width" = survival_layer1_CI.95 - survival_layer1_CI.05, 
+                                                 "survival_layer_2_CI90_width" = survival_layer2_CI.95 - survival_layer2_CI.05, 
+                                                 "survival_layer_3_CI90_width" = survival_layer3_CI.95 - survival_layer3_CI.05, 
+                                                 "survival_layer_4_CI90_width" = survival_layer4_CI.95 - survival_layer4_CI.05 )
 
 # Load plots in a 2x2 grid 
 growth_layer_1_graph <- ggplot( data = subset( luquillo_means, growth_layer_1_imputed != TRUE), aes( x = growth_layer_1_obs, y = growth_layer_1_CI90_width ) ) + geom_point() + labs( x = "sample size", y = "90% CI width", title = "Growth Layer 1")

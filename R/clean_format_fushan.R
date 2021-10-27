@@ -82,26 +82,62 @@ taxa_out        <- clean_df %>%
 # store resolved taxa
 write.csv( taxa_out, 'results/fushan_taxa.csv',
            row.names = F )
+
 # Prepare demographic table --------------------------------------
 
-# distiguish taxa with sample size 0 for each growth layer (1-4) and survival layer (1-4)
-fushan_means <- fushan_means %>% mutate( "growth_layer_1_imputed"   = grepl( "^0", growth_layer_1_obs ),
-                                   "growth_layer_2_imputed"   = grepl( "^0", growth_layer_2_obs ), 
-                                   "growth_layer_3_imputed"   = grepl( "^0", growth_layer_3_obs ), 
-                                   "growth_layer_4_imputed"   = grepl( "^0", growth_layer_4_obs ), 
-                                   "survival_layer_1_imputed" = grepl( "^0", survival_layer_1_obs ), 
-                                   "survival_layer_2_imputed" = grepl( "^0", survival_layer_2_obs ), 
-                                   "survival_layer_3_imputed" = grepl( "^0", survival_layer_3_obs ), 
-                                   "survival_layer_4_imputed" = grepl( "^0", survival_layer_4_obs ) )
+taxa_out <- read.csv( 'results/fushan_taxa.csv' , header = TRUE)
 
-fushan_medians <- fushan_medians %>% mutate( "growth_layer_1_imputed"   = grepl( "^0", growth_layer_1_obs ),
-                                       "growth_layer_2_imputed"   = grepl( "^0", growth_layer_2_obs ), 
-                                       "growth_layer_3_imputed"   = grepl( "^0", growth_layer_3_obs ), 
-                                       "growth_layer_4_imputed"   = grepl( "^0", growth_layer_4_obs ), 
-                                       "survival_layer_1_imputed" = grepl( "^0", survival_layer_1_obs ), 
-                                       "survival_layer_2_imputed" = grepl( "^0", survival_layer_2_obs ), 
-                                       "survival_layer_3_imputed" = grepl( "^0", survival_layer_3_obs ), 
-                                       "survival_layer_4_imputed" = grepl( "^0", survival_layer_4_obs ) )
+# Select variables for demographic means tables - only one as only clean taxa
+# Get demographic variables from fushan_means
+demog_means_df         <- select( fushan_means, -c( genus, family, IDlevel ) ) %>%
+  rename( Submitted_Name = latin, Sp_Code = sp )
+
+# Join clean taxa to rest of schema via accepted names
+demog_means_df_clean   <- data.frame( "Submitted_Name" = taxa_out$Submitted_Name,
+                                      "LCVP_Accepted_Taxon" = taxa_out$LCVP_Accepted_Taxon ) %>%
+  inner_join( demog_means_df ) %>%
+  select( -c( Submitted_Name, Sp_Code ) )
+
+# Distiguish taxa with sample size 0 for each growth layer (1-4) and survival layer (1-4)
+demog_means_df_clean <- demog_means_df_clean %>% 
+  mutate( "growth_layer_1_imputed"   = grepl( "^0", growth_layer_1_obs ),
+          "growth_layer_2_imputed"   = grepl( "^0", growth_layer_2_obs ), 
+          "growth_layer_3_imputed"   = grepl( "^0", growth_layer_3_obs ), 
+          "growth_layer_4_imputed"   = grepl( "^0", growth_layer_4_obs ), 
+          "survival_layer_1_imputed" = grepl( "^0", survival_layer_1_obs ), 
+          "survival_layer_2_imputed" = grepl( "^0", survival_layer_2_obs ), 
+          "survival_layer_3_imputed" = grepl( "^0", survival_layer_3_obs ), 
+          "survival_layer_4_imputed" = grepl( "^0", survival_layer_4_obs ) )
+
+# store demographic means table for resolved AND unresolved taxa
+write.csv( demog_means_df_clean, 'results/fushan_demog_means.csv',
+           row.names = F )
+
+# Select variables for median tables - only one as only clean taxa
+# Get demographic variables from fushan_medians
+demog_medians_df         <- select( fushan_medians, -c( genus, family, IDlevel ) ) %>%
+  rename( Submitted_Name = latin, Sp_Code = sp )
+
+# Join clean taxa to rest of schema via accepted names
+demog_medians_df_clean   <- data.frame( "Submitted_Name" = taxa_out$Submitted_Name,
+                                        "LCVP_Accepted_Taxon" = taxa_out$LCVP_Accepted_Taxon ) %>%
+  inner_join( demog_medians_df ) %>%
+  select( -c( Submitted_Name, Sp_Code ) )
+
+# Distiguish taxa with sample size 0 for each growth layer (1-4) and survival layer (1-4)
+demog_medians_df_clean <- demog_medians_df_clean %>% 
+  mutate( "growth_layer_1_imputed"   = grepl( "^0", growth_layer_1_obs ),
+          "growth_layer_2_imputed"   = grepl( "^0", growth_layer_2_obs ), 
+          "growth_layer_3_imputed"   = grepl( "^0", growth_layer_3_obs ), 
+          "growth_layer_4_imputed"   = grepl( "^0", growth_layer_4_obs ), 
+          "survival_layer_1_imputed" = grepl( "^0", survival_layer_1_obs ), 
+          "survival_layer_2_imputed" = grepl( "^0", survival_layer_2_obs ), 
+          "survival_layer_3_imputed" = grepl( "^0", survival_layer_3_obs ), 
+          "survival_layer_4_imputed" = grepl( "^0", survival_layer_4_obs ) )
+
+# store demographic medians table for resolved AND unresolved taxa
+write.csv( demog_medians_df_clean, 'results/fushan_demog_medians.csv',
+           row.names = F )
 
 # Analyse relationship between sample size and CI width
 # Create variable for CI width
