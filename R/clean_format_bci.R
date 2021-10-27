@@ -97,6 +97,18 @@ write.csv( taxa_unresvd, 'results/bci_taxa_unresvd.csv',
 
 # Prepare demographic table --------------------------------------
 
+# Select variables for demographic tables - one for clean taxa and another for unresolved taxa
+# Get demographic variables from bci_means
+demog_means_df         <- select( bci_means, -c( genus, family, IDlevel ) ) %>%
+                            rename( Submitted_Name = latin, Sp_Code = sp )
+demog_means_df_clean   <- data.frame( "Submitted_Name" = taxa_out$Submitted_Name,
+                                      "LCVP_Accepted_Taxon" = taxa_out$LCVP_Accepted_Taxon ) %>%
+                            inner_join( demog_means_df ) %>%
+                            select( -c( Submitted_Name, Sp_Code ) )
+demog_means_df_unresvd <- data.frame( "Submitted_Name" = taxa_unresvd$Submitted_Name,
+                                      "Sp_Code" = taxa_unresvd$Sp_Code ) %>%
+                            inner_join( demog_means_df )
+
 # Distiguish taxa with sample size 0 for each growth layer (1-4) and survival layer (1-4)
 bci_means <- bci_means %>% mutate( "growth_layer_1_imputed"   = grepl( "^0", growth_layer_1_obs ),
                                    "growth_layer_2_imputed"   = grepl( "^0", growth_layer_2_obs ), 
