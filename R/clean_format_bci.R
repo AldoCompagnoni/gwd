@@ -77,6 +77,13 @@ reclean_df      <- reclean_l %>% bind_rows
 # visually select species identified with lcvp_fuzzy_search
 # Only genus specified, 2 taxa remain unresolved
 
+# Check clean dataframe for duplications in accepted taxa
+clean_df$LCVP_Accepted_Taxon[duplicated(clean_df$LCVP_Accepted_Taxon)]
+#Piper aequale Vahl is duplicated and must be removed
+duplicated_df   <- clean_df %>% subset( LCVP_Accepted_Taxon == "Piper aequale Vahl" )
+clean_df        <- clean_df %>% subset( LCVP_Accepted_Taxon != "Piper aequale Vahl" )
+
+
 # Final taxonomy files 
 taxa_nofuzzy    <- clean_df
 taxa_fuzzy      <- reclean_df
@@ -85,7 +92,7 @@ taxa_out        <- bind_rows( taxa_nofuzzy, taxa_fuzzy ) %>%
                       mutate( site           = 'bci' )
 
 # Do "taxa unresolved" by hand (taxa with no matches found)
-taxa_unresvd    <- no_match_v %>%
+taxa_unresvd    <- bind_rows( no_match_v, duplicated_df ) %>%
                     inner_join( taxa_df ) %>%
                     mutate( site = 'bci' ) 
  
