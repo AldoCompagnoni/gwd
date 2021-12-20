@@ -69,7 +69,7 @@ check_mismatches <- lapply( mismatch_df$Submitted_Name, lcvp_fuzzy_search )
 
 # Check species without matches
 no_match_v <- data.frame( "Submitted_Name" = setdiff( taxa_na_rm_df$Submitted_Name, 
-                       clean_df$Submitted_Name ))
+                                                      clean_df$Submitted_Name ))
 
 # Rerun Leipzig list with fuzzy matching
 reclean_l       <- lapply( no_match_v, lcvp_fuzzy_search )
@@ -78,9 +78,11 @@ reclean_df      <- reclean_l %>% bind_rows
 # Only genus specified, 2 taxa remain unresolved
 
 # Check clean dataframe for duplications in accepted taxa
-clean_df$LCVP_Accepted_Taxon[duplicated(clean_df$LCVP_Accepted_Taxon)]
-#Piper aequale Vahl is duplicated and must be removed
-duplicated_df   <- clean_df %>% subset( LCVP_Accepted_Taxon == "Piper aequale Vahl" )
+duplicates <- clean_df$LCVP_Accepted_Taxon[ duplicated( clean_df$LCVP_Accepted_Taxon ) ]
+subset( clean_df, LCVP_Accepted_Taxon == duplicates )
+#Piper aequale Vahl is duplicated as a synonym and must be removed, label issue as "synonym"
+synonym_df      <- clean_df %>% subset( LCVP_Accepted_Taxon == "Piper aequale Vahl" ) %>%
+                   mutate( issue = 'synonym' )
 clean_df        <- clean_df %>% subset( LCVP_Accepted_Taxon != "Piper aequale Vahl" )
 
 
@@ -91,8 +93,9 @@ taxa_fuzzy      <- reclean_df
 taxa_out        <- bind_rows( taxa_nofuzzy, taxa_fuzzy ) %>%
                       mutate( site           = 'bci' )
 
-# Do "taxa unresolved" by hand (taxa with no matches found)
-taxa_unresvd    <- bind_rows( no_match_v, duplicated_df ) %>%
+# Do "taxa unresolved" by hand (taxa with no matches found), labelling issue as "not in LCVP" for unresolved taxa
+no_match_v      <-  no_match_v %>% mutate( issue = 'not in LCVP' )
+taxa_unresvd    <-  bind_rows( no_match_v, synonym_df ) %>%
                     inner_join( taxa_df ) %>%
                     mutate( site = 'bci' ) 
  
