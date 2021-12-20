@@ -69,8 +69,8 @@ check_mismatches <- lapply( mismatch_df$Submitted_Name, lcvp_fuzzy_search )
 
 # remove 5 unresolved species containing "cf." and "sp.1" from clean data frame
 mismatch_unresvd <- data.frame("Submitted_Name" = grep( 'sp.1|cf.', mismatch_df$Submitted_Name, value = T ))
-clean_df_final <- data.frame("Submitted_Name" = grep( 'sp.1|cf.', clean_df$Submitted_Name, value = T, invert = T ))
-
+clean_df         <- data.frame("Submitted_Name" = grep( 'sp.1|cf.', clean_df$Submitted_Name, value = T, invert = T ))
+  
 # Check species without matches
 no_match_v <- data.frame( "Submitted_Name" = setdiff( taxa_na_rm_df$Submitted_Name, 
                        clean_df$Submitted_Name ))
@@ -83,20 +83,31 @@ reclean_df      <- reclean_l %>% bind_rows
 
 # Final taxonomy files 
 # Clean taxa should have LCVP search results
-taxa_out        <- lapply( clean_df_final$Submitted_Name, get_clean_names ) %>% 
-  bind_rows %>% 
-  rename( Submitted_Name      = Search,
-          First_matched_Name  = Input.Taxon,
-          LCVP_Accepted_Taxon = Output.Taxon ) %>% 
-  # check for accepted names
-  mutate( mismatch_test = str_detect( First_matched_Name, 
-                                      Submitted_Name ), site = 'hkk' )
+clean_df_final  <- lapply( clean_df$Submitted_Name, get_clean_names ) %>% 
+                   bind_rows %>% 
+                   rename( Submitted_Name      = Search,
+                           First_matched_Name  = Input.Taxon,
+                           LCVP_Accepted_Taxon = Output.Taxon ) %>% 
+# check for accepted names
+                   mutate( mismatch_test = str_detect( First_matched_Name, Submitted_Name ), 
+                           site = 'hkk' )
 
-# Do "taxa unresolved" by hand (taxa with no matches found), and add back in the submitted genus, family and IDlevel to enable future identification
-taxa_unresvd    <- bind_rows( taxa_na_df, mismatch_unresvd, no_match_v ) %>%
-                    inner_join( taxa_df ) %>%
-                    mutate( site = 'hkk' ) 
-  
+# Check clean dataframe for duplications in accepted taxa
+duplicates      <- clean_df_final$LCVP_Accepted_Taxon[ duplicated( clean_df_final$LCVP_Accepted_Taxon ) ]
+subset( clean_df_final, LCVP_Accepted_Taxon == duplicates )
+# Casearia grewiifolia Vent. is counted twice and must be removed, label issue as "double count"; remaining taxa are resolved
+double_count_df <- clean_df_final %>% 
+                   subset( LCVP_Accepted_Taxon == "Casearia grewiifolia Vent." ) %>%
+                   mutate( issue = 'double count' )
+taxa_out        <- clean_df_final %>% subset( LCVP_Accepted_Taxon != "Casearia grewiifolia Vent." )
+
+
+# Do "taxa unresolved" by hand (taxa with no matches found), and add back in the submitted genus, family and IDlevel to enable future identification, labelling issue as "not in LCVP" for unresolved taxa
+not_in_LCVP     <-  bind_rows( taxa_na_df, mismatch_unresvd, no_match_v ) %>%
+                    mutate( issue = 'not in LCVP' )
+taxa_unresvd    <-  bind_rows( not_in_LCVP, double_count_df )
+                    mutate( site = 'hkk' )
+#need to get back genus, etc.
 
 # store resolved AND unresolved taxa
 write.csv( taxa_out, 'results/hkk_taxa.csv',
