@@ -93,22 +93,23 @@ reclean_df      <- reclean_l %>% bind_rows
 # visually select species identified with lcvp_fuzzy_search
 # No fuzzy matches for 19 taxa
 
-# Final taxonomy files 
-# Clean taxa should have LCVP search results
-taxa_out        <- lapply( clean_df$Submitted_Name, get_clean_names ) %>% 
-  bind_rows %>% 
-  rename( Submitted_Name      = Search,
-          First_matched_Name  = Input.Taxon,
-          LCVP_Accepted_Taxon = Output.Taxon ) %>% 
-  # check for accepted names
-  mutate( mismatch_test = str_detect( First_matched_Name, 
-                                      Submitted_Name ), site = 'sinharaja' )
+# Check clean dataframe for duplications in accepted taxa
+duplicates      <- clean_df$LCVP_Accepted_Taxon[ duplicated( clean_df$LCVP_Accepted_Taxon ) ]
+duplicates_df   <- clean_df[ clean_df$LCVP_Accepted_Taxon %in% duplicates, ]
+# All these taxa duplicated as a synonym and must be removed, label issue as "synonym"
+synonyms_df     <- duplicates_df %>% mutate( issue = 'synonym' )
 
-# Do "taxa unresolved" by hand (taxa with no matches found), and add back in the submitted genus, family and IDlevel to enable future identification
-taxa_unresvd    <-  no_match_v %>%
+# Final resolved taxonomic file with duplicates removed
+taxa_out        <- clean_df[ !clean_df$LCVP_Accepted_Taxon %in% duplicates, ] %>%
+                   mutate( site = 'sinharaja' )
+
+# Do "taxa unresolved" by hand (taxa with no matches found), and add back in the submitted genus, family and IDlevel to enable future identification, labelling issue as "not in LCVP" for unresolved taxa
+not_in_LCVP     <- no_match_v %>%
   inner_join( taxa_df ) %>%
-  mutate( site = 'sinharaja' ) 
-
+  mutate( issue = 'not in LCVP' )
+taxa_unresvd    <- bind_rows( not_in_LCVP, synonyms_df ) %>%
+  mutate( site = 'sinharaja' ) %>%
+  distinct( .keep_all = TRUE )
 
 # store resolved AND unresolved taxa
 write.csv( taxa_out, 'results/sinharaja_taxa.csv',
@@ -149,7 +150,10 @@ demog_means_df_clean   <- data.frame( "Submitted_Name" = taxa_out$Submitted_Name
 # Join unresolved taxa to rest of schema via species codes
 demog_means_df_unresvd <- data.frame( "Submitted_Name" = taxa_unresvd$Submitted_Name,
                                       "Sp_Code" = taxa_unresvd$Sp_Code ) %>%
-  inner_join( demog_means_df ) 
+  inner_join( demog_means_df, by = "Submitted_Name" ) %>%
+  select( -c( Sp_Code.x ) ) %>%
+  rename( Sp_Code = Sp_Code.y ) %>%
+  distinct( .keep_all = TRUE )
 
 # Distiguish taxa with sample size 0 for each growth layer (1-4) and survival layer (1-4)
 demog_means_df_clean <- demog_means_df_clean %>% 
@@ -194,8 +198,11 @@ demog_medians_df_clean   <- data.frame( "Submitted_Name" = taxa_out$Submitted_Na
 
 # Join unresolved taxa to rest of schema via species codes
 demog_medians_df_unresvd <- data.frame( "Submitted_Name" = taxa_unresvd$Submitted_Name,
-                                        "Sp_Code" = taxa_unresvd$Sp_Code ) %>%
-  inner_join( demog_medians_df )
+                                      "Sp_Code" = taxa_unresvd$Sp_Code ) %>%
+  inner_join( demog_medians_df, by = "Submitted_Name" ) %>%
+  select( -c( Sp_Code.x ) ) %>%
+  rename( Sp_Code = Sp_Code.y ) %>%
+  distinct( .keep_all = TRUE )
 
 # Distiguish taxa with sample size 0 for each growth layer (1-4) and survival layer (1-4)
 demog_medians_df_clean <- demog_medians_df_clean %>% 
