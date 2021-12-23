@@ -76,38 +76,39 @@ no_match_v <- data.frame( "Submitted_Name" = setdiff( taxa_na_rm_df$Submitted_Na
                        clean_df$Submitted_Name ))
 
 # Rerun Leipzig list with fuzzy matching
-reclean_l       <- lapply( no_match_v, lcvp_fuzzy_search )
-reclean_df      <- reclean_l %>% bind_rows
+reclean_l        <- lapply( no_match_v, lcvp_fuzzy_search )
+reclean_df       <- reclean_l %>% bind_rows
 # visually select species identified with lcvp_fuzzy_search
 # No fuzzy match for 3 species, fuzzy matches for 2 taxa are not reliable (only identified to genus level)
 
-# Final taxonomy files 
 # Clean taxa should have LCVP search results
-clean_df_final  <- lapply( clean_df$Submitted_Name, get_clean_names ) %>% 
-                   bind_rows %>% 
-                   rename( Submitted_Name      = Search,
-                           First_matched_Name  = Input.Taxon,
-                           LCVP_Accepted_Taxon = Output.Taxon ) %>% 
+clean_df_final   <- lapply( clean_df$Submitted_Name, get_clean_names ) %>% 
+                    bind_rows %>% 
+                    rename( Submitted_Name      = Search,
+                            First_matched_Name  = Input.Taxon,
+                            LCVP_Accepted_Taxon = Output.Taxon ) %>% 
 # check for accepted names
                    mutate( mismatch_test = str_detect( First_matched_Name, Submitted_Name ), 
                            site = 'hkk' )
 
 # Check clean dataframe for duplications in accepted taxa
 duplicates      <- clean_df_final$LCVP_Accepted_Taxon[ duplicated( clean_df_final$LCVP_Accepted_Taxon ) ]
-subset( clean_df_final, LCVP_Accepted_Taxon == duplicates )
+duplicates_df   <- clean_df_final[clean_df_final$LCVP_Accepted_Taxon %in% duplicates,]
 # Casearia grewiifolia Vent. is counted twice and must be removed, label issue as "double count"; remaining taxa are resolved
-double_count_df <- clean_df_final %>% 
+double_count_df <- duplicates_df %>% 
                    subset( LCVP_Accepted_Taxon == "Casearia grewiifolia Vent." ) %>%
                    mutate( issue = 'double count' )
+# Final resolved taxonomic file
 taxa_out        <- clean_df_final %>% subset( LCVP_Accepted_Taxon != "Casearia grewiifolia Vent." )
 
 
 # Do "taxa unresolved" by hand (taxa with no matches found), and add back in the submitted genus, family and IDlevel to enable future identification, labelling issue as "not in LCVP" for unresolved taxa
-not_in_LCVP     <-  bind_rows( taxa_na_df, mismatch_unresvd, no_match_v ) %>%
+not_in_LCVP     <-  bind_rows( mismatch_unresvd, no_match_v ) %>%
+                    inner_join( taxa_df ) %>%
+                    bind_rows( taxa_na_df ) %>%
                     mutate( issue = 'not in LCVP' )
-taxa_unresvd    <-  bind_rows( not_in_LCVP, double_count_df )
+taxa_unresvd    <-  bind_rows( not_in_LCVP, double_count_df ) %>%
                     mutate( site = 'hkk' )
-#need to get back genus, etc.
 
 # store resolved AND unresolved taxa
 write.csv( taxa_out, 'results/hkk_taxa.csv',
@@ -117,24 +118,27 @@ write.csv( taxa_unresvd, 'results/hkk_taxa_unresvd.csv',
 
 # Prepare demographic table --------------------------------------
 
-taxa_out <- read.csv( 'results/hkk_taxa.csv' , header = TRUE)
+taxa_out     <- read.csv( 'results/hkk_taxa.csv' , header = TRUE)
 taxa_unresvd <- read.csv( 'results/hkk_taxa_unresvd.csv' , header = TRUE)
 
 # Select variables for demographic means tables - one for clean taxa and another for unresolved taxa
 # Get demographic variables from hkk_means
 demog_means_df         <- select( hkk_means, -c( genus, family, IDlevel ) ) %>%
-  rename( Submitted_Name = latin, Sp_Code = sp )
+                          rename( Submitted_Name = latin, Sp_Code = sp )
 
 # Join clean taxa to rest of schema via accepted names
 demog_means_df_clean   <- data.frame( "Submitted_Name" = taxa_out$Submitted_Name,
                                       "LCVP_Accepted_Taxon" = taxa_out$LCVP_Accepted_Taxon ) %>%
-  inner_join( demog_means_df ) %>%
-  select( -c( Submitted_Name, Sp_Code ) )
+                          inner_join( demog_means_df ) %>%
+                          select( -c( Submitted_Name, Sp_Code ) )
 
 # Join unresolved taxa to rest of schema via species codes
 demog_means_df_unresvd <- data.frame( "Submitted_Name" = taxa_unresvd$Submitted_Name,
-                                      "Sp_Code" = taxa_unresvd$Sp_Code ) %>%
-  inner_join( demog_means_df )
+                                        "Sp_Code" = taxa_unresvd$Sp_Code ) %>%
+  inner_join( demog_means_df, by = "Submitted_Name" ) %>%
+  select( -c( Sp_Code.x ) ) %>%
+  rename( Sp_Code = Sp_Code.y ) %>%
+  distinct( .keep_all = TRUE )
 
 # Distiguish taxa with sample size 0 for each growth layer (1-4) and survival layer (1-4)
 demog_means_df_clean <- demog_means_df_clean %>% 
@@ -166,18 +170,21 @@ write.csv( demog_means_df_unresvd, 'results/hkk_demog_means_unresvd.csv',
 # Select variables for median tables - one for clean taxa and another for unresolved taxa
 # Get demographic variables from hkk_medians
 demog_medians_df         <- select( hkk_medians, -c( genus, family, IDlevel ) ) %>%
-  rename( Submitted_Name = latin, Sp_Code = sp )
+                            rename( Submitted_Name = latin, Sp_Code = sp )
 
 # Join clean taxa to rest of schema via accepted names
 demog_medians_df_clean   <- data.frame( "Submitted_Name" = taxa_out$Submitted_Name,
                                         "LCVP_Accepted_Taxon" = taxa_out$LCVP_Accepted_Taxon ) %>%
-  inner_join( demog_medians_df ) %>%
-  select( -c( Submitted_Name, Sp_Code ) )
+                            inner_join( demog_medians_df ) %>%
+                            select( -c( Submitted_Name, Sp_Code ) )
 
 # Join unresolved taxa to rest of schema via species codes
 demog_medians_df_unresvd <- data.frame( "Submitted_Name" = taxa_unresvd$Submitted_Name,
                                         "Sp_Code" = taxa_unresvd$Sp_Code ) %>%
-  inner_join( demog_medians_df )
+  inner_join( demog_medians_df, by = "Submitted_Name" ) %>%
+  select( -c( Sp_Code.x ) ) %>%
+  rename( Sp_Code = Sp_Code.y ) %>%
+  distinct( .keep_all = TRUE )
 
 # Distiguish taxa with sample size 0 for each growth layer (1-4) and survival layer (1-4)
 demog_medians_df_clean <- demog_medians_df_clean %>% 
