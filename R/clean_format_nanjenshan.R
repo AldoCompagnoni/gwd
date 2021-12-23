@@ -90,29 +90,38 @@ mismatch_unresvd <- data.frame("Submitted_Name" = grep( '_var_| NA', mismatch_df
  inner_join( taxa_df ) %>% 
   distinct()
 matched_df <- clean_df %>% subset( mismatch_test ) 
-clean_df_final <- data.frame("Submitted_Name" = grep( '_var_| NA', mismatch_df$Submitted_Name, value = T, invert = T )) %>% full_join( matched_df )
+clean_df_matched <- data.frame("Submitted_Name" = grep( '_var_| NA', mismatch_df$Submitted_Name, value = T, invert = T )) %>% full_join( matched_df )
 
 # Check species without matches
 no_match_v <- data.frame( "Submitted_Name" = setdiff( taxa_na_rm_df$Submitted_Name, 
                                                       clean_df$Submitted_Name ))
 # No unmatched taxa
 
-# Final taxonomy files 
+
 # Clean taxa should have LCVP search results
-taxa_out        <- lapply( clean_df_final$Submitted_Name, get_clean_names ) %>% 
+clean_df_final   <- lapply( clean_df_matched$Submitted_Name, get_clean_names ) %>% 
   bind_rows %>% 
   rename( Submitted_Name      = Search,
           First_matched_Name  = Input.Taxon,
           LCVP_Accepted_Taxon = Output.Taxon ) %>% 
   # check for accepted names
-  mutate( mismatch_test = str_detect( First_matched_Name, 
-                                      Submitted_Name ), site = 'nanjenshan' )
+  mutate( mismatch_test = str_detect( First_matched_Name, Submitted_Name ), 
+          site = 'nanjenshan' )
+
+# Check clean dataframe for duplications in accepted taxa
+duplicates      <- clean_df_final$LCVP_Accepted_Taxon[ duplicated( clean_df_final$LCVP_Accepted_Taxon ) ]
+duplicates_df   <- clean_df_final[ clean_df_final$LCVP_Accepted_Taxon %in% duplicates, ]
+# 0 taxa duplicated
+
+# Final resolved taxonomic file 
+taxa_out        <- clean_df_final
 
 # Do "taxa unresolved" by hand (taxa with no matches found), and add back in the submitted genus, family and IDlevel to enable future identification
 taxa_unresvd    <- bind_rows( taxa_Na_NA_df, mismatch_unresvd ) %>%
   mutate( site = 'nanjenshan' ) 
 # Note there are two taxa "Na NA" both with the Sp_Code "celtfo"
 
+######
 
 # store resolved AND unresolved taxa
 write.csv( taxa_out, 'results/nanjenshan_taxa.csv',
