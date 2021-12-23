@@ -45,35 +45,35 @@ taxa_df         <- dplyr::select( ituri_edoro_means, latin, sp, genus, family, I
   rename( Submitted_Name = latin, Sp_Code = sp, Submitted_Genus = genus, Submitted_Family = family )
 
 # Separate NAs
-taxa_na_df <- subset( taxa_df,  is.na( Submitted_Name ) )
-taxa_na_rm_df       <- subset( taxa_df, !is.na( Submitted_Name ) )
+taxa_na_df      <- subset( taxa_df,  is.na( Submitted_Name ) )
+taxa_na_rm_df   <- subset( taxa_df, !is.na( Submitted_Name ) )
 
 # Create function: get "cleaned" names
-get_clean_names   <- function( nam, fuzzy = 0.1 ) lcvp_search( nam, max.distance = fuzzy )
+get_clean_names <- function( nam, fuzzy = 0.1 ) lcvp_search( nam, max.distance = fuzzy )
 
 # Clean names from the Leipzig's list of plants
-clean_l         <- lapply( taxa_na_rm_df$Submitted_Name , get_clean_names )
+clean_l         <- lapply( taxa_na_rm_df$Submitted_Name, get_clean_names )
 clean_df        <- clean_l %>% 
-  bind_rows %>% 
-  rename( Submitted_Name      = Search,
-          First_matched_Name  = Input.Taxon,
-          LCVP_Accepted_Taxon = Output.Taxon ) %>% 
-  # check for accepted names
-  mutate( mismatch_test = str_detect( First_matched_Name, 
+                   bind_rows %>% 
+                   rename( Submitted_Name      = Search,
+                           First_matched_Name  = Input.Taxon,
+                           LCVP_Accepted_Taxon = Output.Taxon ) %>% 
+                   # check for accepted names
+                   mutate( mismatch_test = str_detect( First_matched_Name, 
                                       Submitted_Name ) )
 
 # visual check of mismatches and alternative spellings
-mismatch_df <- clean_df %>% subset( !mismatch_test )
+mismatch_df      <- clean_df %>% subset( !mismatch_test )
 check_mismatches <- lapply( mismatch_df$Submitted_Name, lcvp_fuzzy_search )
 # 42 plausible typos which remain in clean data frame
 
 # remove 4 unresolved species containing "sp1" "sp2" "sp3" and "xx" from clean data frame
-mismatch_unresvd <- data.frame("Submitted_Name" = grep( 'sp1|sp2|sp3|xx', mismatch_df$Submitted_Name, value = T ))
-clean_df_final <- data.frame("Submitted_Name" = grep( 'sp1|sp2|sp3|xx', clean_df$Submitted_Name, value = T, invert = T ))
+mismatch_unresvd <- data.frame( "Submitted_Name" = grep( 'sp1|sp2|sp3|xx', mismatch_df$Submitted_Name, value = T ) )
+clean_df         <- data.frame( "Submitted_Name" = grep( 'sp1|sp2|sp3|xx', clean_df$Submitted_Name, value = T, invert = T ) )
 
 # Check species without matches
-no_match_v <-  data.frame( "Submitted_Name" = setdiff( taxa_na_rm_df$Submitted_Name, 
-                                                       clean_df$Submitted_Name ))
+no_match_v       <- data.frame( "Submitted_Name" = setdiff( taxa_na_rm_df$Submitted_Name, 
+                                                            clean_df$Submitted_Name ))
 
 # Rerun Leipzig list with fuzzy matching
 reclean_l       <- lapply( no_match_v, lcvp_fuzzy_search )
@@ -81,20 +81,42 @@ reclean_df      <- reclean_l %>% bind_rows
 # visually select species identified with lcvp_fuzzy_search
 # No fuzzy match for 13 species
 
-# Final taxonomy files 
 # Clean taxa should have LCVP search results
-taxa_out        <- lapply( clean_df_final$Submitted_Name, get_clean_names ) %>% 
-  bind_rows %>% 
-  rename( Submitted_Name      = Search,
-          First_matched_Name  = Input.Taxon,
-          LCVP_Accepted_Taxon = Output.Taxon ) %>% 
-  mutate( mismatch_test = str_detect( First_matched_Name, 
-                                      Submitted_Name ), site = 'ituri_edoro'  )
+clean_df_final   <- lapply( clean_df$Submitted_Name, get_clean_names ) %>% 
+                            bind_rows %>% 
+                            rename( Submitted_Name      = Search,
+                            First_matched_Name  = Input.Taxon,
+                            LCVP_Accepted_Taxon = Output.Taxon ) %>% 
+                    # check for accepted names
+                    mutate( mismatch_test = str_detect( First_matched_Name, Submitted_Name ), 
+                            site = 'ituri_edoro' )
 
-# Do "taxa unresolved" by hand (taxa with no matches found)
-taxa_unresvd    <- bind_rows( taxa_na_df, mismatch_unresvd, no_match_v ) %>%
-  inner_join( taxa_df ) %>%
-  mutate( site = 'ituri_edoro' )
+# Check clean dataframe for duplications in accepted taxa
+duplicates      <- clean_df_final$LCVP_Accepted_Taxon[ duplicated( clean_df_final$LCVP_Accepted_Taxon ) ]
+duplicates_df   <- clean_df_final[ clean_df_final$LCVP_Accepted_Taxon %in% duplicates, ]
+# "Cuviera nigrescens (Elliott ex Oliv.) Wernham" is counted twice and must be removed, label issue as "double count"
+double_counts   <- c("Cuviera nigrescens (Elliott ex Oliv.) Wernham")
+double_count_df <- duplicates_df[ duplicates_df$LCVP_Accepted_Taxon %in% double_counts, ]
+double_count_df <- mutate( double_count_df, issue = 'double count' )
+# Several taxa duplicated as synonyms must be removed, label issue as "synonym"
+synonyms        <- c("Allophylus africanus P.Beauv.", 
+                     "Englerophytum iturense (Engl.) L.Gaut.", 
+                     "Phyllocosmus africanus (Hook.f.) Klotzsch", 
+                     "Vepris afzelii (Engl.) Mziray")
+synonyms_df     <- duplicates_df[ duplicates_df$LCVP_Accepted_Taxon %in% synonyms, ]
+synonyms_df     <- mutate( synonyms_df, issue = 'synonym' )
+
+# Final resolved taxonomic file with duplicates removed
+taxa_out        <- clean_df_final[ !clean_df_final$LCVP_Accepted_Taxon %in% duplicates, ]
+
+
+# Do "taxa unresolved" by hand (taxa with no matches found), and add back in the submitted genus, family and IDlevel to enable future identification, labelling issue as "not in LCVP" for unresolved taxa
+not_in_LCVP     <-  bind_rows( mismatch_unresvd, no_match_v ) %>%
+                    inner_join( taxa_df ) %>%
+                    bind_rows( taxa_na_df ) %>%
+                    mutate( issue = 'not in LCVP' )
+taxa_unresvd    <-  bind_rows( not_in_LCVP, double_count_df, synonyms_df ) %>%
+                    mutate( site = 'ituri_edoro' )
 
 # store resolved AND unresolved taxa
 write.csv( taxa_out, 'results/ituri_edoro_taxa.csv',
@@ -121,7 +143,10 @@ demog_means_df_clean   <- data.frame( "Submitted_Name" = taxa_out$Submitted_Name
 # Join unresolved taxa to rest of schema via species codes
 demog_means_df_unresvd <- data.frame( "Submitted_Name" = taxa_unresvd$Submitted_Name,
                                       "Sp_Code" = taxa_unresvd$Sp_Code ) %>%
-  inner_join( demog_means_df )
+  inner_join( demog_means_df, by = "Submitted_Name" ) %>%
+  select( -c( Sp_Code.x ) ) %>%
+  rename( Sp_Code = Sp_Code.y ) %>%
+  distinct( .keep_all = TRUE )
 
 # Distiguish taxa with sample size 0 for each growth layer (1-4) and survival layer (1-4)
 demog_means_df_clean <- demog_means_df_clean %>% 
@@ -163,8 +188,11 @@ demog_medians_df_clean   <- data.frame( "Submitted_Name" = taxa_out$Submitted_Na
 
 # Join unresolved taxa to rest of schema via species codes
 demog_medians_df_unresvd <- data.frame( "Submitted_Name" = taxa_unresvd$Submitted_Name,
-                                        "Sp_Code" = taxa_unresvd$Sp_Code ) %>%
-  inner_join( demog_medians_df )
+                                      "Sp_Code" = taxa_unresvd$Sp_Code ) %>%
+  inner_join( demog_medians_df, by = "Submitted_Name" ) %>%
+  select( -c( Sp_Code.x ) ) %>%
+  rename( Sp_Code = Sp_Code.y ) %>%
+  distinct( .keep_all = TRUE )
 
 # Distiguish taxa with sample size 0 for each growth layer (1-4) and survival layer (1-4)
 demog_medians_df_clean <- demog_medians_df_clean %>% 
