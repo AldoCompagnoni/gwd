@@ -91,14 +91,14 @@ mismatch_unresvd <- data.frame( "Submitted_Name" = grep(  'aff.|cf.|Sp 39|ined.|
   inner_join( taxa_df ) %>%
   distinct()
 matched_df <- clean_df %>% subset( mismatch_test )
-clean_df_final <- data.frame( "Submitted_Name" = grep( 'aff.|cf.|Sp 39|ined.|jvl|incert.|sp. nov.|af.|hairy teeth|Archidendron casai|Castanopsis nivea|Kayea longipedicellata', mismatch_df$Submitted_Name, value = T, invert = T )) %>% full_join( matched_df )
+clean_df_matched <- data.frame( "Submitted_Name" = grep( 'aff.|cf.|Sp 39|ined.|jvl|incert.|sp. nov.|af.|hairy teeth|Archidendron casai|Castanopsis nivea|Kayea longipedicellata', mismatch_df$Submitted_Name, value = T, invert = T )) %>% full_join( matched_df )
 
 # Check species without matches; to avoid duplicates, use Sp_Code as a place holder
-add_sp_code <- select(taxa_na_rm_df, Sp_Code, Submitted_Name)
+add_sp_code    <- select( taxa_na_rm_df, Sp_Code, Submitted_Name  )
 clean_df_coded <- inner_join( clean_df, add_sp_code )
-no_match_v <- data.frame( "Sp_Code" = setdiff( taxa_na_rm_df$Sp_Code, 
+no_match_v     <- data.frame( "Sp_Code" = setdiff( taxa_na_rm_df$Sp_Code, 
                                                        clean_df_coded$Sp_Code ))
-no_match_v <- right_join( taxa_na_rm_df, no_match_v )
+no_match_v     <- right_join( taxa_na_rm_df, no_match_v )
 
 # Rerun Leipzig list with fuzzy matching
 reclean_l       <- lapply( no_match_v$Submitted_Name, lcvp_fuzzy_search )
@@ -106,22 +106,44 @@ reclean_df      <- reclean_l %>% bind_rows
 # from visual inspection, no unmatched species can be resolved via fuzzy search
 # these 151 unmatched species remain unresolved
 
-# Final taxonomy files 
-# All clean taxa should have LCVP search results
-taxa_out        <- lapply( clean_df_final$Submitted_Name, get_clean_names ) %>% 
+# Clean taxa should have LCVP search results
+clean_df_final   <- lapply( clean_df_matched$Submitted_Name, get_clean_names ) %>% 
   bind_rows %>% 
   rename( Submitted_Name      = Search,
           First_matched_Name  = Input.Taxon,
           LCVP_Accepted_Taxon = Output.Taxon ) %>% 
   # check for accepted names
-  mutate( mismatch_test = str_detect( First_matched_Name, 
-                                      Submitted_Name ), site = 'lambir' )
+  mutate( mismatch_test = str_detect( First_matched_Name, Submitted_Name ), 
+          site = 'lambir' )
 
-# Do "taxa unresolved" by hand (taxa with no matches found and unresolved mismatches); add in 'Shorea macroptera subsp. macroptera'
+# Check clean dataframe for duplications in accepted taxa
+duplicates      <- clean_df_final$LCVP_Accepted_Taxon[ duplicated( clean_df_final$LCVP_Accepted_Taxon ) ]
+duplicates_df   <- clean_df_final[ clean_df_final$LCVP_Accepted_Taxon %in% duplicates, ]
+# Several taxa counted twice and must be removed, label issue as "double count"
+double_counts   <- c( "Dacryodes incurvata (Engl.) H.J.Lam",
+                      "Litsea oppositifolia Gibbs",
+                      "Santiria griffithii (Hook.f.) Engl.",
+                      "Shorea macroptera Dyer",
+                      "Shorea scaberrima Burck",
+                      "Syzygium garciniifolium (King) Merr. & L.M.Perry",
+                      "Syzygium oligomyrum Diels",
+                      "Vatica oblongifolia Hook.f.")
+double_count_df <- duplicates_df[ duplicates_df$LCVP_Accepted_Taxon %in% double_counts, ]
+double_count_df <- mutate( double_count_df, issue = 'double count' )
+# Duplicated axa which are not double counted are duplicated as a taxonomic synonym and must be removed, label issue as "synonym"
+synonyms_df     <- duplicates_df[ !duplicates_df$LCVP_Accepted_Taxon %in% double_counts, ]
+synonyms_df     <- mutate( synonyms_df, issue = 'synonym' )
 
-taxa_unresvd    <- bind_rows( taxa_error, mismatch_unresvd, no_match_v ) %>%
-  inner_join( taxa_df ) %>%
-  mutate( site = 'lambir' ) 
+# Final resolved taxonomic file with duplicates removed
+taxa_out        <- clean_df_final[ !clean_df_final$LCVP_Accepted_Taxon %in% duplicates, ]
+
+# Do "taxa unresolved" by hand (taxa with no matches found), and add back in the submitted genus, family and IDlevel to enable future identification, labelling issue as "not in LCVP" for unresolved taxa
+not_in_LCVP     <-  bind_rows( mismatch_unresvd, no_match_v ) %>%
+                    inner_join( taxa_df ) %>%
+                    bind_rows( taxa_na_df, taxa_error ) %>%
+                    mutate( issue = 'not in LCVP' )
+taxa_unresvd    <- bind_rows( not_in_LCVP, double_count_df, synonyms_df ) %>%
+                   mutate( site = 'korup' )
 
 # store resolved AND unresolved taxa
 write.csv( taxa_out, 'results/lambir_taxa.csv',
@@ -148,7 +170,10 @@ demog_means_df_clean   <- data.frame( "Submitted_Name" = taxa_out$Submitted_Name
 # Join unresolved taxa to rest of schema via species codes
 demog_means_df_unresvd <- data.frame( "Submitted_Name" = taxa_unresvd$Submitted_Name,
                                       "Sp_Code" = taxa_unresvd$Sp_Code ) %>%
-  inner_join( demog_means_df )
+                          inner_join( demog_means_df, by = "Submitted_Name" ) %>%
+                          select( -c( Sp_Code.x ) ) %>%
+                          rename( Sp_Code = Sp_Code.y ) %>%
+                          distinct( .keep_all = TRUE )
 
 # Distiguish taxa with sample size 0 for each growth layer (1-4) and survival layer (1-4)
 demog_means_df_clean <- demog_means_df_clean %>% 
@@ -190,8 +215,11 @@ demog_medians_df_clean   <- data.frame( "Submitted_Name" = taxa_out$Submitted_Na
 
 # Join unresolved taxa to rest of schema via species codes
 demog_medians_df_unresvd <- data.frame( "Submitted_Name" = taxa_unresvd$Submitted_Name,
-                                        "Sp_Code" = taxa_unresvd$Sp_Code ) %>%
-  inner_join( demog_medians_df )
+                                      "Sp_Code" = taxa_unresvd$Sp_Code ) %>%
+                          inner_join( demog_medians_df, by = "Submitted_Name" ) %>%
+                          select( -c( Sp_Code.x ) ) %>%
+                          rename( Sp_Code = Sp_Code.y ) %>%
+                          distinct( .keep_all = TRUE )
 
 # Distiguish taxa with sample size 0 for each growth layer (1-4) and survival layer (1-4)
 demog_medians_df_clean <- demog_medians_df_clean %>% 
