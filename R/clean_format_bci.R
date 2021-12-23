@@ -79,8 +79,8 @@ reclean_df      <- reclean_l %>% bind_rows
 
 # Check clean dataframe for duplications in accepted taxa
 duplicates <- clean_df$LCVP_Accepted_Taxon[ duplicated( clean_df$LCVP_Accepted_Taxon ) ]
-subset( clean_df, LCVP_Accepted_Taxon == duplicates )
-#Piper aequale Vahl is duplicated as a synonym and must be removed, label issue as "synonym"
+duplicates_df   <- clean_df_final[clean_df_final$LCVP_Accepted_Taxon %in% duplicates,]
+# Piper aequale Vahl is duplicated as a synonym and must be removed, label issue as "synonym"
 synonym_df      <- clean_df %>% subset( LCVP_Accepted_Taxon == "Piper aequale Vahl" ) %>%
                    mutate( issue = 'synonym' )
 clean_df        <- clean_df %>% subset( LCVP_Accepted_Taxon != "Piper aequale Vahl" )
