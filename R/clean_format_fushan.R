@@ -42,7 +42,7 @@ write.csv( site_out, 'results/fushan_site.csv',
 
 # Produce the binomial used for checking
 taxa_df         <- dplyr::select( fushan_means, latin, sp, genus, family, IDlevel ) %>%
-  rename( Submitted_Name = latin, Sp_Code = sp, Submitted_Genus = genus, Submitted_Family = family )
+                   rename( Submitted_Name = latin, Sp_Code = sp, Submitted_Genus = genus, Submitted_Family = family )
 
 # Separate NAs - no NAs
 taxa_na_df      <- subset( taxa_df,  is.na( Submitted_Name ) )
@@ -54,28 +54,31 @@ get_clean_names <- function( nam, fuzzy = 0.1 ) lcvp_search( nam, max.distance =
 # Clean names from the Leipzig's list of plants
 clean_l         <- lapply( taxa_na_rm_df$Submitted_Name , get_clean_names )
 clean_df        <- clean_l %>% 
-  bind_rows %>% 
-  rename( Submitted_Name      = Search,
-          First_matched_Name  = Input.Taxon,
-          LCVP_Accepted_Taxon = Output.Taxon ) %>% 
-  # check for accepted names
-  mutate( mismatch_test = str_detect( First_matched_Name, 
-                                      Submitted_Name ) )
+                   bind_rows %>% 
+                   rename( Submitted_Name      = Search,
+                           First_matched_Name  = Input.Taxon,
+                           LCVP_Accepted_Taxon = Output.Taxon ) %>% 
+                   # check for accepted names
+                   mutate( mismatch_test = str_detect( First_matched_Name, 
+                                                       Submitted_Name ) )
 
 # visual check of mismatches and alternative spellings
-mismatch_df <- clean_df %>% subset( !mismatch_test )
+mismatch_df      <- clean_df %>% subset( !mismatch_test )
 check_mismatches <- lapply( mismatch_df$Submitted_Name, lcvp_fuzzy_search )
 # 4 plausible typos which remain in clean data frame
 
 # Check species without matches
-no_match_v <- data.frame( "Submitted_Name" = setdiff( taxa_na_rm_df$Submitted_Name, 
-                       clean_df$Submitted_Name ))
+no_match_v      <- data.frame( "Submitted_Name" = setdiff( taxa_na_rm_df$Submitted_Name, 
+                               clean_df$Submitted_Name ))
 # 0 species without matches
 
+# Check clean dataframe for duplications in accepted taxa
+duplicates      <- clean_df$LCVP_Accepted_Taxon[ duplicated( clean_df$LCVP_Accepted_Taxon ) ]
+# 0 taxa duplicated
 
 # Final taxonomy files 
 taxa_out        <- clean_df %>%
-                    mutate( site = 'fushan' )
+                   mutate( site = 'fushan' )
 # No unresolved taxa
 
 
