@@ -43,7 +43,10 @@ write.csv( site_out, 'results/luquillo_site.csv',
 
 # Produce the binomial used for checking
 taxa_df         <- dplyr::select( luquillo_means, latin, sp, genus, family, IDlevel ) %>%
-  rename( Submitted_Name = latin, Sp_Code = sp, Submitted_Genus = genus, Submitted_Family = family )
+                    rename( Submitted_Name = latin, 
+                            Sp_Code = sp, 
+                            Submitted_Genus = genus, 
+                            Submitted_Family = family )
 
 #Capitalise taxa so mismatch test works
 upper_case_genus <- function( x ){
@@ -68,13 +71,13 @@ get_clean_names   <- function( nam, fuzzy = 0.1 ) lcvp_search( nam, max.distance
 # Clean names from the Leipzig's list of plants
 clean_l         <- lapply( taxa_na_rm_df$Submitted_Name, get_clean_names )
 clean_df        <- clean_l %>% 
-  bind_rows %>% 
-  rename( Submitted_Name      = Search,
-          First_matched_Name  = Input.Taxon,
-          LCVP_Accepted_Taxon = Output.Taxon ) %>% 
-  # check for accepted names
-  mutate( mismatch_test = str_detect( First_matched_Name, 
-                                      Submitted_Name ) )
+                    bind_rows %>% 
+                    rename( Submitted_Name      = Search,
+                            First_matched_Name  = Input.Taxon,
+                            LCVP_Accepted_Taxon = Output.Taxon ) %>% 
+                    # check for accepted names
+                    mutate( mismatch_test = str_detect( First_matched_Name, 
+                                                        Submitted_Name ) )
 
 # visual check of mismatches and alternative spellings
 mismatch_df <- clean_df %>% subset( !mismatch_test )
@@ -82,9 +85,9 @@ check_mismatches <- lapply( mismatch_df$Submitted_Name, lcvp_fuzzy_search )
 # 2 plausible typos which remain in clean data frame
 
 # remove 5 unresolved species containing "X", "spp" "Â" and "NA NA" from clean data frame
-mismatch_unresvd <- data.frame("Submitted_Name" = grep( 'X|spp|Â|NA NA', mismatch_df$Submitted_Name, value = T ))
-matched_df <- clean_df %>% subset( mismatch_test )
-clean_df_matched <- data.frame("Submitted_Name" = grep( 'X|spp|Â|NA NA', mismatch_df$Submitted_Name, value = T, invert = T )) %>% full_join( matched_df )
+mismatch_unresvd  <- data.frame("Submitted_Name" = grep( 'X|spp|Â|NA NA', mismatch_df$Submitted_Name, value = T ))
+matched_df        <- clean_df %>% subset( mismatch_test )
+clean_df_matched  <- data.frame("Submitted_Name" = grep( 'X|spp|Â|NA NA', mismatch_df$Submitted_Name, value = T, invert = T )) %>% full_join( matched_df )
 
 # Check species without matches
 no_match_v <- data.frame( "Submitted_Name" = setdiff( taxa_na_rm_df$Submitted_Name, 
@@ -100,7 +103,7 @@ clean_df_final   <- lapply( clean_df_matched$Submitted_Name, get_clean_names ) %
           LCVP_Accepted_Taxon = Output.Taxon ) %>% 
   # check for accepted names
   mutate( mismatch_test = str_detect( First_matched_Name, Submitted_Name ), 
-          site = 'lambir' )
+          site = 'luquillo' )
 
 # Check clean dataframe for duplications in accepted taxa
 duplicates      <- clean_df_final$LCVP_Accepted_Taxon[ duplicated( clean_df_final$LCVP_Accepted_Taxon ) ]
@@ -115,10 +118,10 @@ taxa_out        <- clean_df_final[ !clean_df_final$LCVP_Accepted_Taxon %in% dupl
 
 # Do "taxa unresolved" by hand (taxa with no matches found), and add back in the submitted genus, family and IDlevel to enable future identification
 not_in_LCVP     <-  bind_rows( mismatch_unresvd, no_match_v ) %>%
-  inner_join( taxa_df ) %>%
-  mutate( issue = 'not in LCVP' )
+                      inner_join( taxa_df ) %>%
+                      mutate( issue = 'not in LCVP' )
 taxa_unresvd    <- bind_rows( not_in_LCVP, synonyms_df ) %>%
-  mutate( site = 'luquillo' )
+                      mutate( site = 'luquillo' )
 
 # store resolved AND unresolved taxa
 write.csv( taxa_out, 'results/luquillo_taxa.csv',
@@ -128,13 +131,13 @@ write.csv( taxa_unresvd, 'results/luquillo_taxa_unresvd.csv',
 
 # Prepare demographic table --------------------------------------
 
-taxa_out <- read.csv( 'results/luquillo_taxa.csv' , header = TRUE)
-taxa_unresvd <- read.csv( 'results/luquillo_taxa_unresvd.csv' , header = TRUE)
+taxa_out      <- read.csv( 'results/luquillo_taxa.csv' , header = TRUE)
+taxa_unresvd  <- read.csv( 'results/luquillo_taxa_unresvd.csv' , header = TRUE)
 
 # Select variables for demographic means tables - one for clean taxa and another for unresolved taxa
 # Get demographic variables from luquillo_means
 demog_means_df         <- select( luquillo_means, -c( genus, family, IDlevel ) ) %>%
-  rename( Submitted_Name = latin, Sp_Code = sp )
+                            rename( Submitted_Name = latin, Sp_Code = sp )
 
 #Capitalise taxa in demog_means_df
 upper_case_genus <- function( x ){
